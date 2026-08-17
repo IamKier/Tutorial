@@ -24,7 +24,7 @@ const FILTERS = [
   { key: 'done', label: 'Done' },
 ];
 
-export function TasksPage({ user, onSignOut }) {
+export function TasksPage() {
   const { toast, show, hide } = useToast();
   const toggleTheme = useTheme();
 
@@ -54,7 +54,7 @@ export function TasksPage({ user, onSignOut }) {
     [show]
   );
 
-  const tasks = useTasks({ onError, onSignedOut: onSignOut, onDeleted });
+  const tasks = useTasks({ onError, onDeleted });
 
   // onDeleted is created before `tasks` exists, so it cannot close over
   // tasks.undo directly. A ref bridges the gap — it is read at click time, by
@@ -143,8 +143,6 @@ export function TasksPage({ user, onSignOut }) {
           </div>
 
           <div className="masthead__actions">
-            <span className="masthead__user">{user.email}</span>
-
             <a className="icon-button" href="/learn/" aria-label="Open the lessons">
               <Icon name="book" />
             </a>
@@ -157,15 +155,6 @@ export function TasksPage({ user, onSignOut }) {
             >
               <Icon name="sun" className="icon icon--sun" />
               <Icon name="moon" className="icon icon--moon" />
-            </button>
-
-            <button
-              className="icon-button"
-              type="button"
-              onClick={onSignOut}
-              aria-label="Sign out"
-            >
-              <Icon name="signOut" />
             </button>
           </div>
         </header>

@@ -14,17 +14,16 @@
    to invent new numbers.
 
    Contents:
-     1.  Layout
-     2.  Sign in / register
-     3.  Buttons
-     4.  Progress
-     5.  Composer
-     6.  Toolbar and filters
-     7.  Task list
-     8.  Empty and loading states
-     9.  Toast
-     10. Motion
-     11. Small screens
+     1. Layout
+     2. Buttons
+     3. Progress
+     4. Composer
+     5. Toolbar and filters
+     6. Task list
+     7. Empty and loading states
+     8. Toast
+     9. Motion
+    10. Small screens
    ========================================================================== */
 
 /* --- 1. LAYOUT ------------------------------------------------------------- */
@@ -32,38 +31,10 @@ body {
   padding: var(--space-6) var(--space-4) var(--space-7);
 }
 
-/* The sign-in screen centres its card. It is a wrapper div rather than a class
-   on <body>, because React owns everything inside #root and nothing outside
-   it — reaching out to toggle a class on body would be the one piece of state
-   living somewhere React cannot see. */
-.auth-shell {
-  display: grid;
-  place-items: center;
-  min-height: calc(100vh - var(--space-7) * 2);
-}
-
-/* Shown for the fraction of a second before we know whether anyone is signed
-   in. Deliberately almost nothing: a full loading screen that flashes is worse
-   than a mark that fades. */
-.splash {
-  display: grid;
-  place-items: center;
-  min-height: 60vh;
-}
-
-.splash__mark {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 1.25rem;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
 .app {
+  /* A column capped at a comfortable width, centred. `margin: auto` with a
+     max-width is the oldest centring trick on the web and still the right one
+     here. */
   width: 100%;
   max-width: 36rem;
   margin: 0 auto;
@@ -98,161 +69,7 @@ body {
   gap: var(--space-2);
 }
 
-.masthead__user {
-  max-width: 12rem;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-/* --- 2. SIGN IN / REGISTER ------------------------------------------------- */
-.auth {
-  width: 100%;
-  max-width: 22rem;
-  padding: var(--space-6);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-md);
-}
-
-.auth__head {
-  margin-bottom: var(--space-5);
-  text-align: center;
-}
-
-.auth__mark {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  margin: 0 auto var(--space-3);
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 1.25rem;
-}
-
-.auth__title {
-  margin: 0;
-  font-size: var(--text-xl);
-  font-weight: 640;
-  letter-spacing: -0.02em;
-}
-
-.auth__subtitle {
-  margin: var(--space-1) 0 0;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-.auth__tabs {
-  display: flex;
-  gap: var(--space-1);
-  margin-bottom: var(--space-4);
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
-  background: var(--surface-sunken);
-}
-
-.auth__tab {
-  flex: 1;
-  padding: var(--space-2);
-  border: none;
-  border-radius: 6px;
-  background: none;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: 520;
-  cursor: pointer;
-  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-
-.auth__tab.is-active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
-
-.auth__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.field__label {
-  font-size: var(--text-sm);
-  font-weight: 560;
-}
-
-.field__input {
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
-}
-
-.field__input:focus {
-  outline: none; /* replaced by the halo below */
-  border-color: var(--accent);
-  /* A spread-only shadow makes a ring without moving anything, because
-     shadows take up no space. */
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.field__hint {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-}
-
-.auth__error {
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: var(--text-sm);
-}
-
-.auth__submit {
-  padding: var(--space-3);
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 580;
-  cursor: pointer;
-  transition: background var(--fast) var(--ease);
-}
-
-.auth__submit:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.auth__submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.auth__note {
-  margin: var(--space-5) 0 0;
-  color: var(--text-faint);
-  font-size: var(--text-xs);
-  text-align: center;
-  line-height: 1.5;
-}
-
-/* --- 3. BUTTONS ------------------------------------------------------------ */
+/* --- 2. BUTTONS ------------------------------------------------------------ */
 .icon-button {
   display: grid;
   place-items: center;
@@ -310,7 +127,7 @@ body {
   color: var(--danger);
 }
 
-/* --- 4. PROGRESS ----------------------------------------------------------- */
+/* --- 3. PROGRESS ----------------------------------------------------------- */
 .progress {
   margin-bottom: var(--space-4);
 }
@@ -340,13 +157,12 @@ body {
 
 .progress__fill {
   height: 100%;
-  width: 0%; /* JavaScript sets the real width */
   border-radius: var(--radius-full);
   background: var(--accent);
   transition: width var(--slow) var(--ease);
 }
 
-/* --- 5. COMPOSER ----------------------------------------------------------- */
+/* --- 4. COMPOSER ----------------------------------------------------------- */
 .composer {
   display: flex;
   gap: var(--space-2);
@@ -373,8 +189,10 @@ body {
 
 .composer__input:focus,
 .composer__due:focus {
-  outline: none;
+  outline: none; /* replaced by the halo below */
   border-color: var(--accent);
+  /* A spread-only shadow makes a ring without moving anything, because shadows
+     take up no space. */
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
@@ -429,7 +247,7 @@ body {
   font-weight: 520;
 }
 
-/* --- 6. TOOLBAR AND FILTERS ------------------------------------------------ */
+/* --- 5. TOOLBAR AND FILTERS ------------------------------------------------ */
 .toolbar {
   display: flex;
   align-items: center;
@@ -483,7 +301,7 @@ body {
   color: var(--text-muted);
 }
 
-/* --- 7. TASK LIST ---------------------------------------------------------- */
+/* --- 6. TASK LIST ---------------------------------------------------------- */
 .tasks {
   /* A <ul> arrives with bullets and indentation. Strip both. */
   list-style: none;
@@ -513,8 +331,8 @@ body {
 }
 
 /* An overdue task gets a coloured left edge — visible while scanning, and not
-   the only signal, since the due badge also says "Overdue" in words. Colour
-   alone is invisible to a colour-blind reader. */
+   the only signal, since the badge also says "Overdue" in words. Colour alone
+   is invisible to a colour-blind reader. */
 .task.is-overdue {
   border-left: 3px solid var(--danger);
 }
@@ -637,7 +455,7 @@ body {
 }
 
 /* State lives in ONE class on the parent and everything that changes hangs off
-   it. JavaScript only toggles the word `is-done`; it never touches a colour. */
+   it. The component only toggles the word `is-done`; it never sets a colour. */
 .task.is-done .task__title {
   color: var(--text-faint);
   text-decoration: line-through;
@@ -704,7 +522,7 @@ kbd {
   font-size: 0.9em;
 }
 
-/* --- 8. EMPTY AND LOADING STATES ------------------------------------------- */
+/* --- 7. EMPTY AND LOADING STATES ------------------------------------------- */
 .empty {
   padding: var(--space-7) var(--space-4);
   text-align: center;
@@ -755,7 +573,7 @@ kbd {
   animation-delay: 0.3s;
 }
 
-/* --- 9. TOAST -------------------------------------------------------------- */
+/* --- 8. TOAST -------------------------------------------------------------- */
 .toast {
   position: fixed;
   left: 50%;
@@ -805,7 +623,7 @@ kbd {
   background: var(--accent-soft);
 }
 
-/* --- 10. MOTION ------------------------------------------------------------ */
+/* --- 9. MOTION ------------------------------------------------------------- */
 @keyframes pulse {
   0%,
   100% {
@@ -836,14 +654,7 @@ kbd {
   animation: task-in var(--slow) var(--ease);
 }
 
-/* A task on its way out, while the delete request is still in flight. */
-.task.is-removing {
-  opacity: 0;
-  transform: scale(0.97);
-  pointer-events: none;
-}
-
-/* --- 11. SMALL SCREENS -----------------------------------------------------
+/* --- 10. SMALL SCREENS -----------------------------------------------------
    Only a handful of rules, because everything above was built with flexbox and
    max-widths rather than fixed sizes. Design for the flexible case first and
    the mobile breakpoint becomes a tidy-up instead of a rewrite.
@@ -855,11 +666,6 @@ kbd {
 
   .masthead__title {
     font-size: 1.5rem;
-  }
-
-  /* The email is the first thing to go — the icons still work without it. */
-  .masthead__user {
-    display: none;
   }
 
   /* Give the date field its own row rather than crushing the title input. */

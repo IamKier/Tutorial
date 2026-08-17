@@ -2,15 +2,14 @@
 // test/db.test.js — THE DATA LAYER
 // ============================================================================
 //
-// Node has a test runner built in, so this project still needs no
-// dependencies. Run it with:
+// Node has a test runner built in, so this needs no test framework:
 //
 //     npm test
 //
-// The data layer is the right thing to test first. It is pure logic with no
-// HTTP involved, the rules it enforces are the ones that matter most
-// (ownership, allow-lists, limits), and a bug here corrupts data rather than
-// just looking wrong.
+// The data layer is the right thing to test. It is pure logic with no HTTP
+// involved, the rules it enforces are the ones that matter most (allow-lists,
+// limits, type conversion), and a bug here corrupts data rather than just
+// looking wrong.
 // ============================================================================
 
 import test from 'node:test';
@@ -22,17 +21,15 @@ import path from 'node:path';
 // ---------------------------------------------------------------------------
 // Point the app at a throwaway database BEFORE importing anything that reads
 // the config. config.js reads process.env when it is first imported, and
-// db/index.js opens the file and runs migrations at import time — so this must
-// happen first, and the imports below must be dynamic.
+// db/index.js opens the file and runs migrations at import time — so this has
+// to happen first, and the imports below have to be dynamic.
 //
-// A test that writes to your real database is a test you will eventually
-// regret running.
+// A test that writes to your real database is a test you will regret running.
 // ---------------------------------------------------------------------------
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
 process.env.DATA_DIR = tempDir;
 
-const users = await import('../src/db/users.js');
-const tasks = await import('../src/db/tasks.js');
+const db = await import('../src/db/tasks.js');
 const { closeDatabase } = await import('../src/db/index.js');
 
 test.after(() => {
@@ -40,171 +37,157 @@ test.after(() => {
   fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
-/** Each test makes its own user, so no test can be affected by another. */
-let counter = 0;
-function makeUser() {
-  counter++;
-  return users.createUser(`user${counter}@test.local`, 'not-a-real-hash');
+/** Start each test from an empty table, so no test can affect another. */
+function reset() {
+  for (const task of db.listTasks()) db.deleteTask(task.id);
 }
 
 // ---------------------------------------------------------------------------
-// Users
-// ---------------------------------------------------------------------------
-
-test('createUser returns a public user without the password hash', () => {
-  const user = users.createUser('alice@test.local', 'hashed');
-
-  assert.ok(user.id);
-  assert.equal(user.email, 'alice@test.local');
-  // The important assertion: a hash must never travel outward from here.
-  assert.equal(user.passwordHash, undefined);
-});
-
-test('email lookup is case-insensitive', () => {
-  users.createUser('bob@test.local', 'hashed');
-
-  // The schema declares COLLATE NOCASE. Without it, Bob@Test.local would be a
-  // second, separate account — and whichever one you logged into would depend
-  // on how you typed it.
-  assert.ok(users.findByEmail('BOB@TEST.LOCAL'));
-  assert.ok(users.emailExists('Bob@Test.Local'));
-});
-
-// ---------------------------------------------------------------------------
-// Tasks
-// ---------------------------------------------------------------------------
 
 test('a created task comes back with sane defaults', () => {
-  const user = makeUser();
-  const task = tasks.createTask(user.id, { title: 'Write tests' });
+  reset();
+  const task = db.createTask({ title: 'Write tests' });
 
   assert.ok(task.id);
   assert.equal(task.title, 'Write tests');
-  // `done` must be a real boolean, not the 0 that SQLite stores. If it leaked
-  // through as a number, `if (task.done)` would be false for 0 — correct by
-  // accident — but JSON would send `0` and the checkbox would misbehave.
+  // A real boolean, not the 0 SQLite stores. If the number leaked through,
+  // JSON would send `0` to a checkbox that expects `false`.
   assert.equal(task.done, false);
   assert.equal(task.dueAt, null);
   assert.equal(task.createdAt, task.updatedAt);
 });
 
-test('listTasks returns newest first, and only your own', () => {
-  const alice = makeUser();
-  const bob = makeUser();
+test('ids are unique across tasks with the same title', () => {
+  reset();
+  const a = db.createTask({ title: 'Same' });
+  const b = db.createTask({ title: 'Same' });
 
-  tasks.createTask(alice.id, { title: 'First' });
-  tasks.createTask(alice.id, { title: 'Second' });
-  tasks.createTask(bob.id, { title: "Bob's task" });
+  assert.notEqual(a.id, b.id);
+});
 
-  const list = tasks.listTasks(alice.id);
+test('listTasks returns newest first', () => {
+  reset();
+  db.createTask({ title: 'First' });
+  db.createTask({ title: 'Second' });
+  db.createTask({ title: 'Third' });
 
-  assert.equal(list.length, 2);
-  assert.equal(list[0].title, 'Second');
-  // The whole point of scoping every query by userId.
-  assert.ok(!list.some((t) => t.title === "Bob's task"));
+  const list = db.listTasks();
+
+  assert.equal(list.length, 3);
+  assert.equal(list[0].title, 'Third');
+  assert.equal(list[2].title, 'First');
 });
 
 test('updateTask only writes allowed fields', () => {
-  const user = makeUser();
-  const task = tasks.createTask(user.id, { title: 'Original' });
+  reset();
+  const task = db.createTask({ title: 'Original' });
 
-  const updated = tasks.updateTask(task.id, user.id, {
+  const updated = db.updateTask(task.id, {
     title: 'Renamed',
     done: true,
-    // These two must be ignored. Letting a caller set them is mass assignment,
-    // and `userId` in particular would hand the task to another account.
+    // Must be ignored. Letting a caller set the id is mass assignment, and it
+    // would let one request overwrite an unrelated row.
     id: 'hijacked-id',
-    userId: 'someone-else',
+    createdAt: '1999-01-01T00:00:00.000Z',
   });
 
   assert.equal(updated.title, 'Renamed');
   assert.equal(updated.done, true);
   assert.equal(updated.id, task.id);
-  // Still visible to its real owner, so userId did not move.
-  assert.equal(tasks.listTasks(user.id).length, 1);
+  assert.equal(updated.createdAt, task.createdAt);
 });
 
 test('updateTask refreshes updatedAt but not createdAt', async () => {
-  const user = makeUser();
-  const task = tasks.createTask(user.id, { title: 'Timestamps' });
+  reset();
+  const task = db.createTask({ title: 'Timestamps' });
 
-  // ISO strings have millisecond resolution, so without a pause the two
-  // timestamps can land in the same millisecond and the assertion below passes
-  // or fails depending on how fast the machine is.
+  // ISO strings have millisecond resolution, so without a pause both
+  // timestamps can land in the same millisecond and this passes or fails
+  // depending on how fast the machine is.
   await new Promise((resolve) => setTimeout(resolve, 5));
 
-  const updated = tasks.updateTask(task.id, user.id, { done: true });
+  const updated = db.updateTask(task.id, { done: true });
 
   assert.equal(updated.createdAt, task.createdAt);
   assert.ok(updated.updatedAt > task.updatedAt);
 });
 
-test('one user cannot read, change or delete another user\'s task', () => {
-  const alice = makeUser();
-  const bob = makeUser();
-  const task = tasks.createTask(alice.id, { title: 'Private' });
+test('updating an unknown id returns null rather than throwing', () => {
+  reset();
+  assert.equal(db.updateTask('no-such-id', { done: true }), null);
+  assert.equal(db.getTask('no-such-id'), null);
+});
 
-  // Bob knows the id and still gets nothing. Ownership is enforced in the SQL,
-  // not by a check a route could forget to write.
-  assert.equal(tasks.getTask(task.id, bob.id), null);
-  assert.equal(tasks.updateTask(task.id, bob.id, { done: true }), null);
-  assert.equal(tasks.deleteTask(task.id, bob.id), false);
+test('an update with no recognised fields changes nothing', () => {
+  reset();
+  const task = db.createTask({ title: 'Untouched' });
 
-  // And Alice's copy is untouched.
-  assert.equal(tasks.getTask(task.id, alice.id).done, false);
+  const result = db.updateTask(task.id, { nonsense: true });
+
+  assert.deepEqual(result, task);
 });
 
 test('deleteTask reports whether anything went', () => {
-  const user = makeUser();
-  const task = tasks.createTask(user.id, { title: 'Delete me' });
+  reset();
+  const task = db.createTask({ title: 'Delete me' });
 
-  assert.equal(tasks.deleteTask(task.id, user.id), true);
-  // Deleting twice is not an error — it is simply a no-op the second time,
-  // which is what makes DELETE safe to retry.
-  assert.equal(tasks.deleteTask(task.id, user.id), false);
+  assert.equal(db.deleteTask(task.id), true);
+  // Deleting twice is not an error — it is a no-op the second time, which is
+  // what makes DELETE safe to retry.
+  assert.equal(db.deleteTask(task.id), false);
 });
 
-test('deleteCompleted removes only finished tasks, only yours', () => {
-  const alice = makeUser();
-  const bob = makeUser();
+test('deleteCompleted removes only finished tasks', () => {
+  reset();
+  const done = db.createTask({ title: 'Done' });
+  db.createTask({ title: 'Not done' });
+  db.updateTask(done.id, { done: true });
 
-  const done = tasks.createTask(alice.id, { title: 'Done' });
-  tasks.createTask(alice.id, { title: 'Not done' });
-  const bobsDone = tasks.createTask(bob.id, { title: "Bob's done" });
+  assert.equal(db.deleteCompleted(), 1);
 
-  tasks.updateTask(done.id, alice.id, { done: true });
-  tasks.updateTask(bobsDone.id, bob.id, { done: true });
-
-  assert.equal(tasks.deleteCompleted(alice.id), 1);
-  assert.equal(tasks.listTasks(alice.id).length, 1);
-  // Bob's completed task survives Alice clearing hers.
-  assert.equal(tasks.listTasks(bob.id).length, 1);
+  const left = db.listTasks();
+  assert.equal(left.length, 1);
+  assert.equal(left[0].title, 'Not done');
 });
 
 test('restoreTask puts a task back with its original id and timestamps', () => {
-  const user = makeUser();
-  const task = tasks.createTask(user.id, { title: 'Undo me' });
+  reset();
+  const task = db.createTask({ title: 'Undo me' });
 
-  tasks.deleteTask(task.id, user.id);
-  tasks.restoreTask(user.id, task);
+  db.deleteTask(task.id);
+  db.restoreTask(task);
 
-  const restored = tasks.getTask(task.id, user.id);
+  const restored = db.getTask(task.id);
 
-  // If undo created a new id, anything referring to the old one would break —
-  // and it would sort to the top instead of returning to where it was.
+  // A new id would break anything referring to the old one, and the task would
+  // sort to the top instead of returning to where it was.
   assert.equal(restored.id, task.id);
   assert.equal(restored.createdAt, task.createdAt);
+  assert.deepEqual(restored, task);
 });
 
 test('dueAt round-trips, and can be cleared with null', () => {
-  const user = makeUser();
+  reset();
   const due = '2026-09-01T23:59:59.000Z';
-  const task = tasks.createTask(user.id, { title: 'Due', dueAt: due });
+  const task = db.createTask({ title: 'Due', dueAt: due });
 
   assert.equal(task.dueAt, due);
 
-  const cleared = tasks.updateTask(task.id, user.id, { dueAt: null });
+  const cleared = db.updateTask(task.id, { dueAt: null });
   // Explicit null has to be distinguishable from "field not supplied", or a
   // due date could never be removed once set.
   assert.equal(cleared.dueAt, null);
+});
+
+test('a done task survives a title change', () => {
+  reset();
+  const task = db.createTask({ title: 'Before' });
+  db.updateTask(task.id, { done: true });
+
+  const renamed = db.updateTask(task.id, { title: 'After' });
+
+  // Each field is written independently, so touching one must not reset
+  // another. Easy to get wrong with a naive "replace the whole row" update.
+  assert.equal(renamed.title, 'After');
+  assert.equal(renamed.done, true);
 });

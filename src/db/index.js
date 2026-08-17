@@ -95,6 +95,42 @@ const MIGRATIONS = [
       CREATE INDEX idx_sessions_expires ON sessions(expiresAt);
     `);
   },
+
+  // --- 2: remove accounts --------------------------------------------------
+  // The app became single-user, so users, sessions and the userId column all
+  // went. Note that migration 1 above is left exactly as it was: it already
+  // ran on databases in the wild, and editing it would mean those databases
+  // and fresh ones no longer end up in the same state. Always add, never edit.
+  () => {
+    db.exec(`
+      -- SQLite can drop a column directly these days, but the create-copy-swap
+      -- dance is the portable way and it is worth knowing: it is also how you
+      -- change a column's type or its constraints, which ALTER still cannot do.
+      CREATE TABLE tasks_new (
+        id        TEXT PRIMARY KEY,
+        title     TEXT NOT NULL,
+        done      INTEGER NOT NULL DEFAULT 0,
+        dueAt     TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      );
+
+      -- Columns are listed explicitly rather than with *, so this keeps
+      -- working if the old table ever gained a column we do not want.
+      INSERT INTO tasks_new (id, title, done, dueAt, createdAt, updatedAt)
+        SELECT id, title, done, dueAt, createdAt, updatedAt FROM tasks;
+
+      DROP TABLE tasks;
+      ALTER TABLE tasks_new RENAME TO tasks;
+
+      CREATE INDEX idx_tasks_created ON tasks(createdAt DESC);
+
+      -- sessions references users, so it has to go first or the foreign key
+      -- constraint refuses the drop.
+      DROP TABLE sessions;
+      DROP TABLE users;
+    `);
+  },
 ];
 
 function migrate() {

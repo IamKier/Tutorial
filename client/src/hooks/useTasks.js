@@ -2,13 +2,13 @@
 // useTasks — THE TASK LIST AND EVERYTHING YOU CAN DO TO IT
 // ============================================================================
 //
-// All the task logic lives here, so the components below are only about
-// layout. That split is the point of custom hooks: TasksPage should read like
-// a description of the screen, not like a description of the network.
+// All the task logic lives here, so the components are only about layout.
+// That split is the point of custom hooks: TasksPage should read like a
+// description of the screen, not like a description of the network.
 // ============================================================================
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { tasks as api, ApiError } from '../api.js';
+import { tasks as api } from '../api.js';
 import { isOverdue } from '../format.js';
 
 const FILTER_KEY = 'task-filter';
@@ -22,33 +22,26 @@ function loadFilter() {
   }
 }
 
-export function useTasks({ onError, onSignedOut, onDeleted }) {
+export function useTasks({ onError, onDeleted }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  // A function passed to useState is called once, on the first render only.
+  // Writing `useState(loadFilter())` instead would read localStorage on every
+  // single render and throw the result away.
   const [filter, setFilterState] = useState(loadFilter);
   const [justAdded, setJustAdded] = useState(null);
 
-  /**
-   * Every call to the server goes through this.
-   *
-   * A 401 means the session expired — possibly days ago, in another tab.
-   * There is nothing useful to say about it, so we hand control back up to the
-   * app, which shows the login screen.
-   */
+  /** Every call to the server goes through this, so error handling is in one place. */
   const run = useCallback(
     async (work) => {
       try {
         return await work();
       } catch (err) {
-        if (err instanceof ApiError && err.status === 401) {
-          onSignedOut();
-          return null;
-        }
         onError(err.message);
         return null;
       }
     },
-    [onError, onSignedOut]
+    [onError]
   );
 
   const reload = useCallback(async () => {
@@ -71,7 +64,7 @@ export function useTasks({ onError, onSignedOut, onDeleted }) {
 
     document.addEventListener('visibilitychange', onVisible);
     // Removing the listener on unmount is not optional — without it, every
-    // mount adds another one and they all keep firing.
+    // mount adds another and they all keep firing.
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [reload]);
 
@@ -109,9 +102,9 @@ export function useTasks({ onError, onSignedOut, onDeleted }) {
       const updated = await run(() => api.update(id, { done: !task.done }));
       if (!updated) return reload();
 
-      // A new array, not a mutated one. React compares by identity, so
-      // pushing into the existing array would change the data without
-      // re-rendering anything — the single most common React bug.
+      // A new array, not a mutated one. React compares by identity, so pushing
+      // into the existing array would change the data without re-rendering
+      // anything — the single most common React bug.
       setTasks((current) => current.map((t) => (t.id === id ? updated : t)));
     },
     [tasks, run, reload]
@@ -122,8 +115,8 @@ export function useTasks({ onError, onSignedOut, onDeleted }) {
       const trimmed = title.trim();
       const task = tasks.find((t) => t.id === id);
 
-      // Nothing to do if it is unchanged, and an empty title is a cancel
-      // rather than an error — the server would reject it anyway.
+      // Nothing to do if unchanged, and an empty title is a cancel rather than
+      // an error — the server would reject it anyway.
       if (!trimmed || !task || trimmed === task.title) return;
 
       const updated = await run(() => api.update(id, { title: trimmed }));
@@ -171,11 +164,11 @@ export function useTasks({ onError, onSignedOut, onDeleted }) {
 
   // ---- Derived values -----------------------------------------------------
   //
-  // Calculated on every render rather than stored in state. Storing a count
-  // means keeping two things in step, and one day they disagree.
+  // Calculated on every render rather than stored. Storing a count means
+  // keeping two things in step, and one day they disagree.
   //
-  // useMemo skips the recalculation when nothing it depends on changed. With
-  // a dozen tasks that is unnecessary; it is here because with ten thousand it
+  // useMemo skips the recalculation when nothing it depends on changed. With a
+  // dozen tasks that is unnecessary; it is here because with ten thousand it
   // would not be, and the shape of the code is the same either way.
 
   const visible = useMemo(() => {

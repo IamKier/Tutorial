@@ -8,64 +8,48 @@
 //   src/config.js       settings, from the environment
 //   src/http.js         request/response helpers
 //   src/router.js       method + path -> handler
-//   src/static.js       serving files
+//   src/static.js       serving the build
 //   src/security.js     headers, rate limiting, CSRF
 //   src/db/             the database and its queries
-//   src/auth/           password hashing and sessions
 //   src/routes/         the API handlers
 //
-// Run it:  node server.js
-// Watch:   npm run dev
+// Run it:  npm run dev     (React with hot reload, on :5173)
+//          npm run serve   (build once, serve everything from :3000)
 // ============================================================================
 
 import http from 'node:http';
-import { PORT, IS_PRODUCTION, TRUST_PROXY, SESSION_COOKIE } from './src/config.js';
-import { HttpError, sendJson, sendText, parseCookies, isSecureRequest } from './src/http.js';
+import { PORT, IS_PRODUCTION } from './src/config.js';
+import { HttpError, sendJson, sendText, isSecureRequest } from './src/http.js';
+import { TRUST_PROXY } from './src/config.js';
 import { createRouter } from './src/router.js';
 import { serveStatic } from './src/static.js';
-import { securityHeaders, requireJsonContentType, startRateLimitCleanup } from './src/security.js';
-import { getSession, startSessionCleanup } from './src/auth/session.js';
+import {
+  securityHeaders,
+  requireJsonContentType,
+  rateLimitWrites,
+  startRateLimitCleanup,
+} from './src/security.js';
 import { closeDatabase } from './src/db/index.js';
-import * as authRoutes from './src/routes/auth.js';
 import * as taskRoutes from './src/routes/tasks.js';
 
 // ----------------------------------------------------------------------------
 // ROUTES
+//
+// The whole API, readable at a glance. That is the point of keeping the route
+// table in one place rather than spreading registrations across files.
 // ----------------------------------------------------------------------------
-
-/**
- * Wrap a handler so it only runs for a signed-in user.
- *
- * Doing it here, at the point each route is declared, means protection is
- * visible in the route table — you can read the list below and see exactly
- * which endpoints are public. A check buried inside each handler is one you
- * can forget to write.
- */
-function requireAuth(handler) {
-  return async (req, res, ctx) => {
-    if (!ctx.user) throw new HttpError(401, 'Sign in to continue');
-    return handler(req, res, ctx);
-  };
-}
 
 const router = createRouter();
 
-// Public
-router.post('/api/auth/register', authRoutes.register);
-router.post('/api/auth/login', authRoutes.login);
-router.post('/api/auth/logout', authRoutes.logout);
-router.get('/api/auth/me', authRoutes.me);
+router.get('/api/tasks', taskRoutes.list);
+router.post('/api/tasks', taskRoutes.create);
+router.delete('/api/tasks', taskRoutes.clearCompleted);
+router.patch('/api/tasks/:id', taskRoutes.update);
+router.delete('/api/tasks/:id', taskRoutes.remove);
+router.post('/api/tasks/:id/undo', taskRoutes.undo);
 
 // A cheap endpoint for a load balancer or uptime monitor to poll.
 router.get('/api/health', async (req, res) => sendJson(res, 200, { ok: true }));
-
-// Protected
-router.get('/api/tasks', requireAuth(taskRoutes.list));
-router.post('/api/tasks', requireAuth(taskRoutes.create));
-router.delete('/api/tasks', requireAuth(taskRoutes.clearCompleted));
-router.patch('/api/tasks/:id', requireAuth(taskRoutes.update));
-router.delete('/api/tasks/:id', requireAuth(taskRoutes.remove));
-router.post('/api/tasks/:id/undo', requireAuth(taskRoutes.undo));
 
 // ----------------------------------------------------------------------------
 // THE REQUEST HANDLER
@@ -78,38 +62,23 @@ const server = http.createServer(async (req, res) => {
   // constructor needs a base. Parsing properly gives us pathname and
   // searchParams instead of splitting strings by hand.
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-  const secure = isSecureRequest(req, TRUST_PROXY);
 
-  // Security headers go on every response, including errors — an error page is
-  // still a page an attacker can try to use.
-  for (const [name, value] of Object.entries(securityHeaders(secure))) {
+  // Security headers go on every response, errors included — an error page is
+  // still a page someone can try to use.
+  for (const [name, value] of Object.entries(securityHeaders(isSecureRequest(req, TRUST_PROXY)))) {
     res.setHeader(name, value);
   }
 
   try {
-    // Resolve the session once, before routing, so every handler can rely on
-    // ctx.user without each one repeating the lookup.
-    const cookies = parseCookies(req);
-    const sessionId = cookies[SESSION_COOKIE];
-    const session = getSession(sessionId);
-
-    const ctx = {
-      url,
-      params: {},
-      sessionId,
-      user: session ? { id: session.userId, email: session.email } : null,
-    };
-
     if (url.pathname.startsWith('/api/')) {
-      // Anything that changes state must arrive as JSON. See the note in
-      // security.js — this is half of the CSRF defence.
       requireJsonContentType(req);
+      rateLimitWrites(req);
 
       const match = router.match(req.method, url.pathname);
 
       if (!match) {
         // Distinguish "no such path" from "wrong verb for this path". A 404
-        // where a 405 belongs sends people looking for a typo that is not
+        // where a 405 belongs sends people hunting for a typo that is not
         // there.
         const allowed = router.allowedMethods(url.pathname);
 
@@ -121,8 +90,7 @@ const server = http.createServer(async (req, res) => {
         throw new HttpError(404, 'Unknown endpoint');
       }
 
-      ctx.params = match.params;
-      await match.handler(req, res, ctx);
+      await match.handler(req, res, { url, params: match.params });
     } else {
       // Everything else is a file from dist/, or the single-page-app fallback.
       await serveStatic(req, res, url.pathname);
@@ -130,11 +98,9 @@ const server = http.createServer(async (req, res) => {
   } catch (err) {
     handleError(err, req, res);
   } finally {
-    // One log line per request. In production you would want structured JSON
-    // here so a log aggregator can query it, but this is enough to see what is
-    // happening while you build.
-    const ms = Date.now() - startedAt;
-    console.log(`${req.method} ${url.pathname} ${res.statusCode} ${ms}ms`);
+    // One line per request. In production you would want structured JSON here
+    // so a log aggregator can query it; this is enough while you build.
+    console.log(`${req.method} ${url.pathname} ${res.statusCode} ${Date.now() - startedAt}ms`);
   }
 });
 
@@ -176,12 +142,12 @@ function handleError(err, req, res) {
 
 server.on('error', (err) => {
   // Without this handler, a busy port produces an unhandled exception and a
-  // wall of Node internals. This is the same information, in a sentence.
+  // wall of Node internals. Same information, one sentence.
   if (err.code === 'EADDRINUSE') {
     console.error(`\n  Port ${PORT} is already in use.`);
-    console.error(`  Either stop what is using it, or pick another:\n`);
-    console.error(`      PowerShell:  $env:PORT = "3001"; node server.js`);
-    console.error(`      Linux/macOS: PORT=3001 node server.js\n`);
+    console.error('  Either stop what is using it, or pick another:\n');
+    console.error('      PowerShell:  $env:PORT = "3001"; node server.js');
+    console.error('      Linux/macOS: PORT=3001 node server.js\n');
     process.exit(1);
   }
   throw err;
@@ -194,7 +160,6 @@ server.listen(PORT, () => {
   console.log('\n  Ctrl+C to stop.\n');
 });
 
-startSessionCleanup();
 startRateLimitCleanup();
 
 /**

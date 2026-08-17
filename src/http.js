@@ -90,54 +90,6 @@ export async function readJsonBody(req) {
 }
 
 /**
- * Parse the Cookie header into an object.
- *
- * The header is one string: "sid=abc123; theme=dark". There is no built-in
- * parser in Node, so this is it.
- */
-export function parseCookies(req) {
-  const header = req.headers.cookie;
-  if (!header) return {};
-
-  const cookies = {};
-  for (const part of header.split(';')) {
-    // Split on the FIRST "=" only — a cookie value may legitimately contain
-    // more of them, and `split('=')` would truncate it.
-    const index = part.indexOf('=');
-    if (index === -1) continue;
-
-    const name = part.slice(0, index).trim();
-    const value = part.slice(index + 1).trim();
-    if (name) cookies[name] = decodeURIComponent(value);
-  }
-  return cookies;
-}
-
-/**
- * Build a Set-Cookie header value.
- *
- * The flags are the security-relevant part:
- *
- *   HttpOnly  JavaScript cannot read it. If your page ever has an XSS hole,
- *             this is what stops the attacker walking off with the session.
- *   SameSite  The browser will not attach it to cross-site POSTs, which is
- *             most of CSRF prevention for free.
- *   Secure    Only ever sent over HTTPS, so it cannot leak on a coffee-shop
- *             network. Omitted on plain localhost or the browser would refuse
- *             to store it during development.
- *   Path=/    Sent for every route on the site, not just the one that set it.
- */
-export function buildCookie(name, value, { maxAge, secure, httpOnly = true } = {}) {
-  const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=/', 'SameSite=Lax'];
-
-  if (httpOnly) parts.push('HttpOnly');
-  if (secure) parts.push('Secure');
-  if (maxAge !== undefined) parts.push(`Max-Age=${maxAge}`);
-
-  return parts.join('; ');
-}
-
-/**
  * Was this request made over HTTPS?
  *
  * Behind a reverse proxy the connection to Node itself is plain HTTP, and the

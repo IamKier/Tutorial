@@ -1,17 +1,18 @@
 // ============================================================================
-// routes/tasks.js — THE TASK API
+// routes/tasks.js — THE API
 // ============================================================================
 //
-//   GET    /api/tasks           list yours
-//   POST   /api/tasks           create one
-//   PATCH  /api/tasks/:id       update one
-//   DELETE /api/tasks/:id       delete one
+//   GET    /api/tasks           list
+//   POST   /api/tasks           create
+//   PATCH  /api/tasks/:id       update
+//   DELETE /api/tasks/:id       delete
 //   POST   /api/tasks/:id/undo  put a deleted one back
 //   DELETE /api/tasks           clear completed
 //
-// Every handler receives ctx.user, guaranteed non-null by requireAuth in
-// server.js, and passes ctx.user.id to the database layer — which scopes every
-// query by it. Ownership is enforced in the SQL, not remembered here.
+// A plural noun for the collection, the same noun plus an id for one item, and
+// the HTTP method carrying the verb. That shape is what "RESTful" means in
+// practice, and following it means another developer can guess the API before
+// reading any documentation.
 // ============================================================================
 
 import { HttpError, sendJson, readJsonBody } from '../http.js';
@@ -21,9 +22,9 @@ import * as db from '../db/tasks.js';
 /**
  * Validate a title. Returns the cleaned value or throws.
  *
- * The browser form checks this too, but a form is not the only way to reach
- * this endpoint — anyone can send a request directly. Client-side validation
- * is a courtesy to honest users; this is the check that protects the data.
+ * The browser checks this too, but a form is not the only way to reach this
+ * endpoint — anything that speaks HTTP can. Client-side validation is a
+ * courtesy to honest users; this is the check that protects the data.
  */
 function cleanTitle(value) {
   if (typeof value !== 'string') throw new HttpError(400, 'A "title" string is required');
@@ -38,7 +39,7 @@ function cleanTitle(value) {
 }
 
 /**
- * Validate a due date. Accepts an ISO string or null (which clears it).
+ * Validate a due date. Accepts an ISO string, or null to clear it.
  *
  * `new Date('nonsense')` does not throw — it produces an Invalid Date, and
  * arithmetic on that silently gives NaN. Checking with isNaN is the only
@@ -51,18 +52,18 @@ function cleanDueAt(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new HttpError(400, '"dueAt" is not a valid date');
 
-  // Store it normalised, so everything in the database is the same shape
+  // Store it normalised, so everything in the database has the same shape
   // regardless of what the client sent.
   return date.toISOString();
 }
 
 // ---------------------------------------------------------------------------
 
-export async function list(req, res, ctx) {
-  sendJson(res, 200, db.listTasks(ctx.user.id));
+export async function list(req, res) {
+  sendJson(res, 200, db.listTasks());
 }
 
-export async function create(req, res, ctx) {
+export async function create(req, res) {
   const body = await readJsonBody(req);
 
   const title = cleanTitle(body.title);
@@ -70,7 +71,7 @@ export async function create(req, res, ctx) {
 
   let task;
   try {
-    task = db.createTask(ctx.user.id, { title, dueAt });
+    task = db.createTask({ title, dueAt });
   } catch (err) {
     if (err.message === 'Task limit reached') {
       throw new HttpError(409, 'You have reached the maximum number of tasks');
@@ -88,7 +89,7 @@ export async function update(req, res, ctx) {
 
   // Build the changes explicitly rather than forwarding the request body. The
   // database layer allow-lists as well — two layers, because this is the
-  // mistake that lets one account write into another's rows.
+  // mistake that lets a caller write to columns you never meant to expose.
   const changes = {};
   if (body.title !== undefined) changes.title = cleanTitle(body.title);
   if (body.done !== undefined) {
@@ -97,11 +98,7 @@ export async function update(req, res, ctx) {
   }
   if (body.dueAt !== undefined) changes.dueAt = cleanDueAt(body.dueAt);
 
-  const task = db.updateTask(ctx.params.id, ctx.user.id, changes);
-
-  // Null means "no such task, or not yours". The caller cannot tell those
-  // apart, and should not be able to — otherwise a 403 versus a 404 reveals
-  // which ids exist.
+  const task = db.updateTask(ctx.params.id, changes);
   if (!task) throw new HttpError(404, 'Task not found');
 
   sendJson(res, 200, task);
@@ -111,10 +108,10 @@ export async function remove(req, res, ctx) {
   // Read it before deleting so the response can carry the whole task back.
   // That is what makes undo possible without a server-side trash table: the
   // client holds the only copy until the toast disappears.
-  const task = db.getTask(ctx.params.id, ctx.user.id);
+  const task = db.getTask(ctx.params.id);
   if (!task) throw new HttpError(404, 'Task not found');
 
-  db.deleteTask(ctx.params.id, ctx.user.id);
+  db.deleteTask(ctx.params.id);
 
   sendJson(res, 200, { deleted: task });
 }
@@ -127,8 +124,8 @@ export async function undo(req, res, ctx) {
     throw new HttpError(400, 'A matching "task" object is required');
   }
 
-  // Everything here is re-validated. The client is handing back an object we
-  // gave it a moment ago, but "we sent it" is not a reason to trust what comes
+  // Everything is re-validated. The client is handing back an object we gave
+  // it a moment ago, but "we sent it" is not a reason to trust what comes
   // back — it may have been edited in between.
   const restored = {
     id: ctx.params.id,
@@ -139,15 +136,15 @@ export async function undo(req, res, ctx) {
     updatedAt: new Date().toISOString(),
   };
 
-  if (db.getTask(restored.id, ctx.user.id)) {
+  if (db.getTask(restored.id)) {
     throw new HttpError(409, 'That task already exists');
   }
 
-  db.restoreTask(ctx.user.id, restored);
+  db.restoreTask(restored);
   sendJson(res, 201, restored);
 }
 
-export async function clearCompleted(req, res, ctx) {
-  const count = db.deleteCompleted(ctx.user.id);
+export async function clearCompleted(req, res) {
+  const count = db.deleteCompleted();
   sendJson(res, 200, { deleted: count });
 }
