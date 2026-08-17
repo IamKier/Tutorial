@@ -1,0 +1,328 @@
+<h1>CSS: the basics <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  CSS decides what the page looks like. The language itself is simple — pick
+  elements, set properties. What takes time is learning which properties matter
+  and why your rule is not applying.
+</p>
+
+<h2>A rule</h2>
+
+<pre><code>h1 {
+  color: navy;
+  font-size: 2rem;
+}
+↑   ↑          ↑
+|   property   value
+selector</code></pre>
+
+<p>There are three ways to attach CSS to a page, and only one you should use:</p>
+
+<pre><code>&lt;!-- 1. External file — do this --&gt;
+&lt;link rel="stylesheet" href="/styles.css" /&gt;
+
+&lt;!-- 2. In the head — fine for a scratch file --&gt;
+&lt;style&gt; h1 { color: navy; } &lt;/style&gt;
+
+&lt;!-- 3. Inline — avoid --&gt;
+&lt;h1 style="color: navy"&gt;Title&lt;/h1&gt;</code></pre>
+
+<p>
+  An external file is cached, reusable across pages, and keeps style out of
+  your markup. Inline styles cannot be reused, cannot express hover or media
+  queries, and beat almost everything else in specificity — which makes them
+  painful to override later.
+</p>
+
+<h2>Selectors</h2>
+
+<pre><code>h1            { }   /* every h1 */
+.card         { }   /* every element with class="card" */
+#header       { }   /* the element with id="header" */
+.card p       { }   /* any p inside a .card, at any depth */
+.card &gt; p     { }   /* only a p that is a DIRECT child */
+.card, .panel { }   /* both — a comma means "or" */
+input[type="email"] { }   /* by attribute */
+a:hover       { }   /* while the mouse is over it */
+li:first-child{ }   /* structural position */
+.task.is-done { }   /* has BOTH classes (no space!) */</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The space matters</span>
+  <p>
+    <code>.task.is-done</code> means one element with both classes.
+    <code>.task .is-done</code> — with a space — means an element with class
+    <code>is-done</code> somewhere <em>inside</em> a <code>.task</code>. Two
+    completely different rules that look nearly identical. When a selector
+    mysteriously matches nothing, check this first.
+  </p>
+</div>
+
+<p>Pseudo-classes you will actually use:</p>
+
+<pre><code>:hover          /* pointer is over it */
+:focus          /* it has keyboard focus */
+:focus-visible  /* focused via keyboard, not a click */
+:active         /* being pressed right now */
+:disabled       /* a disabled form control */
+:checked        /* a ticked checkbox or radio */
+:first-child / :last-child / :nth-child(2)
+:not(.excluded) /* everything except */</code></pre>
+
+<h2>Which rule wins</h2>
+
+<p>
+  When two rules set the same property on the same element, CSS decides by
+  <strong>specificity</strong> — how precisely the selector points at the
+  element. From weakest to strongest:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Selector</th><th>Strength</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>p</code>, <code>li::before</code></td><td>element — weakest</td></tr>
+    <tr><td><code>.card</code>, <code>:hover</code>, <code>[type="text"]</code></td><td>class</td></tr>
+    <tr><td><code>#header</code></td><td>id</td></tr>
+    <tr><td><code>style="..."</code></td><td>inline — very strong</td></tr>
+    <tr><td><code>!important</code></td><td>overrides everything — a last resort</td></tr>
+  </tbody>
+</table>
+
+<p>
+  If two rules have equal specificity, the one written later wins. That is why
+  the order of your stylesheet matters, and why <code>theme.css</code> is loaded
+  before <code>styles.css</code> in this project.
+</p>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Keep specificity flat</span>
+  <p>
+    Style with single classes and you rarely have a fight. The moment you write
+    <code>#sidebar .nav ul li a.link</code>, the only way to override it later is
+    something even worse. Notice that this project's stylesheets are almost
+    entirely single class selectors — that is deliberate, not an accident.
+  </p>
+</div>
+
+<h2>The box model</h2>
+
+<p>Every element is a box with four layers, from the inside out:</p>
+
+<pre><code>┌─────────────── margin ───────────────┐   space OUTSIDE
+│ ┌───────────── border ─────────────┐ │
+│ │ ┌─────────── padding ──────────┐ │ │   space INSIDE
+│ │ │                              │ │ │
+│ │ │          content             │ │ │
+│ │ │                              │ │ │
+│ │ └──────────────────────────────┘ │ │
+│ └──────────────────────────────────┘ │
+└──────────────────────────────────────┘</code></pre>
+
+<pre><code>.box {
+  padding: 1rem;              /* all four sides */
+  padding: 1rem 2rem;         /* vertical | horizontal */
+  padding: 1rem 2rem 0.5rem 2rem;  /* top right bottom left, clockwise */
+
+  border: 1px solid #ddd;
+  margin: 0 auto;             /* 0 top/bottom, auto left/right = centred */
+}</code></pre>
+
+<p>Then there is the one setting that fixes the box model:</p>
+
+<pre><code>*, *::before, *::after {
+  box-sizing: border-box;
+}</code></pre>
+
+<p>
+  By default, <code>width: 300px</code> means the <em>content</em> is 300px, so
+  adding padding makes the box wider than you asked for. With
+  <code>border-box</code>, width means the whole visible width, padding and
+  border included. Every project sets this on the first line and never thinks
+  about it again — including this one, in <code>theme.css</code>.
+</p>
+
+<h3>Margins collapse</h3>
+
+<p>
+  Two vertical margins that meet do not add up — the larger one wins. A 20px
+  margin below one paragraph and a 30px margin above the next gives you 30px of
+  gap, not 50px. This surprises everyone once. It does not happen with
+  <code>gap</code> in flexbox or grid, which is one more reason to lay things
+  out that way.
+</p>
+
+<h2>Display</h2>
+
+<pre><code>display: block;         /* full width, stacks vertically — div, p, h1 */
+display: inline;        /* flows in text, ignores width/height — span, a */
+display: inline-block;  /* flows in text but accepts width/height */
+display: flex;          /* lays its children out in a row or column */
+display: grid;          /* lays its children out in a grid */
+display: none;          /* removed entirely — takes up no space */</code></pre>
+
+<p>
+  <code>display: none</code> versus <code>visibility: hidden</code>: the first
+  removes the element from the layout, the second leaves a hole where it was.
+  And note the HTML <code>hidden</code> attribute does the same job as
+  <code>display: none</code> with no CSS at all — this project uses it for the
+  empty state and the toast.
+</p>
+
+<h2>Colour, text, units</h2>
+
+<pre><code>color: #4f46e5;               /* hex */
+color: rgb(79 70 229);        /* modern syntax, no commas */
+color: rgb(79 70 229 / 0.5);  /* with 50% alpha */
+color: hsl(243 75% 59%);      /* hue, saturation, lightness */</code></pre>
+
+<p>
+  HSL is worth knowing because it is the only one you can reason about: keep
+  the hue, raise the lightness, and you have a lighter version of the same
+  colour. Doing that in hex is guesswork.
+</p>
+
+<pre><code>font-family: system-ui, sans-serif;  /* fallbacks, left to right */
+font-size: 1rem;
+font-weight: 600;
+line-height: 1.5;        /* unitless: 1.5 × this element's font size */
+text-align: center;
+text-decoration: line-through;
+letter-spacing: -0.02em;</code></pre>
+
+<p>Units, and when each is right:</p>
+
+<table>
+  <thead>
+    <tr><th>Unit</th><th>Means</th><th>Use for</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>px</code></td><td>Absolute pixels</td><td>Borders, tiny fixed details</td></tr>
+    <tr><td><code>rem</code></td><td>× the root font size</td><td>Font sizes, spacing — <strong>your default</strong></td></tr>
+    <tr><td><code>em</code></td><td>× the current element's font size</td><td>Padding that should scale with its own text</td></tr>
+    <tr><td><code>%</code></td><td>× the parent</td><td>Fluid widths</td></tr>
+    <tr><td><code>vh</code> / <code>vw</code></td><td>× the viewport</td><td>Full-screen sections</td></tr>
+    <tr><td><code>fr</code></td><td>A share of leftover space</td><td>Grid columns</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout--note">
+  <span class="callout__title">Why rem rather than px for text</span>
+  <p>
+    Someone who finds small text hard to read can raise their browser's default
+    font size. <code>rem</code> respects that and scales with it;
+    <code>px</code> overrides it and leaves them stuck. It costs nothing to use
+    <code>rem</code> and it matters to real people.
+  </p>
+</div>
+
+<h2>Inheritance</h2>
+
+<p>
+  Some properties pass down to children automatically —
+  <code>color</code>, <code>font-family</code>, <code>font-size</code>,
+  <code>line-height</code>. Most do not: <code>border</code>,
+  <code>padding</code>, <code>background</code> apply only where you set them.
+</p>
+
+<p>
+  Form controls are the famous exception — they do <em>not</em> inherit fonts,
+  which is why nearly every stylesheet contains this:
+</p>
+
+<pre><code>input, button, select, textarea {
+  font: inherit;
+}</code></pre>
+
+<p>Leave it out and your buttons quietly use the browser's font instead of yours.</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Style a card</h3>
+  </div>
+  <p>
+    Take a <code>&lt;div class="card"&gt;</code> containing an
+    <code>&lt;h2&gt;</code> and a <code>&lt;p&gt;</code>. Give the card a white
+    background, 1px light-grey border, 12px rounded corners, 1.5rem of padding,
+    a max width of 24rem, and centre it on the page. Make the heading dark blue
+    and the paragraph grey. On hover, darken the border.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>.card {
+  max-width: 24rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid #e5e7ec;
+  border-radius: 12px;
+  background: white;
+  transition: border-color 120ms ease;
+}
+
+.card:hover {
+  border-color: #b0b6c0;
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  color: #1e3a8a;
+}
+
+.card p {
+  margin: 0;
+  color: #6b7382;
+}</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Win a specificity fight</h3>
+  </div>
+  <p>Given this HTML and CSS, what colour is the text? Work it out before testing.</p>
+<pre><code>&lt;p id="intro" class="lead highlight"&gt;Hello&lt;/p&gt;
+
+p            { color: black; }
+.lead        { color: blue; }
+.highlight   { color: green; }
+#intro       { color: red; }
+p.lead       { color: purple; }</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      <strong>Red.</strong> The id selector outranks everything else here.
+      Below that, <code>p.lead</code> (element + class) beats a lone class;
+      between <code>.lead</code> and <code>.highlight</code>, which tie,
+      <code>.highlight</code> wins by being written later. Note that the order
+      of classes in the HTML attribute makes no difference at all — only the
+      order in the stylesheet.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Feel the box model</h3>
+  </div>
+  <p>
+    Make a div 300px wide with 20px padding and a 5px border. Measure its real
+    width in DevTools. Now add <code>box-sizing: border-box</code> and measure
+    again. Explain the two numbers.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      First 350px — 300 content + 40 padding + 10 border. Then exactly 300px,
+      because <code>border-box</code> makes the padding and border fit
+      <em>inside</em> the declared width, squeezing the content area to 250px.
+      The second behaviour is what everyone expects "width" to mean, which is
+      why every project turns it on globally.
+    </p>
+  </details>
+</div>

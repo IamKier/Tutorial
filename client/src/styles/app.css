@@ -1,0 +1,896 @@
+/* ==========================================================================
+   app.css — THE APP'S OWN STYLES
+
+   Tokens, reset and shared utilities live in theme.css, which index.html
+   links directly (the lesson site under /learn uses it too, and that is plain
+   static HTML). This file is imported by main.jsx, so Vite bundles it.
+
+   Plain CSS with class names, not CSS-in-JS and not modules. React changes how
+   the markup is produced; it does not require a different way of styling it,
+   and these classes were already written.
+
+   Notice how few raw values appear below. Almost every number is a var().
+   That is what makes an interface feel consistent — not taste, just refusing
+   to invent new numbers.
+
+   Contents:
+     1.  Layout
+     2.  Sign in / register
+     3.  Buttons
+     4.  Progress
+     5.  Composer
+     6.  Toolbar and filters
+     7.  Task list
+     8.  Empty and loading states
+     9.  Toast
+     10. Motion
+     11. Small screens
+   ========================================================================== */
+
+/* --- 1. LAYOUT ------------------------------------------------------------- */
+body {
+  padding: var(--space-6) var(--space-4) var(--space-7);
+}
+
+/* The sign-in screen centres its card. It is a wrapper div rather than a class
+   on <body>, because React owns everything inside #root and nothing outside
+   it — reaching out to toggle a class on body would be the one piece of state
+   living somewhere React cannot see. */
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - var(--space-7) * 2);
+}
+
+/* Shown for the fraction of a second before we know whether anyone is signed
+   in. Deliberately almost nothing: a full loading screen that flashes is worse
+   than a mark that fades. */
+.splash {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.splash__mark {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 1.25rem;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.app {
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
+}
+
+.masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.masthead__title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 640;
+  /* Large text looks loose at default spacing. Tightening it is what makes a
+     heading look typeset rather than typed. */
+  letter-spacing: -0.02em;
+}
+
+.masthead__date {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.masthead__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.masthead__user {
+  max-width: 12rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* --- 2. SIGN IN / REGISTER ------------------------------------------------- */
+.auth {
+  width: 100%;
+  max-width: 22rem;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.auth__head {
+  margin-bottom: var(--space-5);
+  text-align: center;
+}
+
+.auth__mark {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto var(--space-3);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 1.25rem;
+}
+
+.auth__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 640;
+  letter-spacing: -0.02em;
+}
+
+.auth__subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.auth__tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.auth__tab {
+  flex: 1;
+  padding: var(--space-2);
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 520;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.auth__tab.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: 560;
+}
+
+.field__input {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.field__input:focus {
+  outline: none; /* replaced by the halo below */
+  border-color: var(--accent);
+  /* A spread-only shadow makes a ring without moving anything, because
+     shadows take up no space. */
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.field__hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.auth__error {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.auth__submit {
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 580;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+
+.auth__submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.auth__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth__note {
+  margin: var(--space-5) 0 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* --- 3. BUTTONS ------------------------------------------------------------ */
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
+}
+
+.icon-button:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* Sun in light mode, moon in dark — chosen by CSS, no JavaScript needed. */
+.icon--moon {
+  display: none;
+}
+:root[data-theme='dark'] .icon--sun {
+  display: none;
+}
+:root[data-theme='dark'] .icon--moon {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .icon--sun {
+    display: none;
+  }
+  :root:not([data-theme='light']) .icon--moon {
+    display: block;
+  }
+}
+
+.text-button {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.text-button:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* --- 4. PROGRESS ----------------------------------------------------------- */
+.progress {
+  margin-bottom: var(--space-4);
+}
+
+.progress__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.progress__value {
+  /* Digits are different widths in most fonts, so a changing number makes the
+     text jitter. This makes them all equal width. */
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 560;
+}
+
+.progress__track {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  width: 0%; /* JavaScript sets the real width */
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  transition: width var(--slow) var(--ease);
+}
+
+/* --- 5. COMPOSER ----------------------------------------------------------- */
+.composer {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.composer__input {
+  flex: 1;
+  /* Lets the input shrink below its content width on a narrow screen. Without
+     it, flex items refuse to and the row overflows — this one line fixes a lot
+     of mysterious layouts. */
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.composer__input::placeholder {
+  color: var(--text-faint);
+}
+
+.composer__input:focus,
+.composer__due:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.composer__due {
+  width: 9.5rem;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.composer__submit {
+  display: grid;
+  place-items: center;
+  width: 2.875rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+
+.composer__submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+/* A 1px press. Barely visible, and its absence is what makes a button feel
+   dead when you click it. */
+.composer__submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.composer__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.overdue-note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 520;
+}
+
+/* --- 6. TOOLBAR AND FILTERS ------------------------------------------------ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.filters {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 520;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.filter:hover {
+  color: var(--text);
+}
+
+/* The selected tab is raised onto its own surface; the others sit flat in the
+   sunken tray. */
+.filter.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter__count {
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.filter.is-active .filter__count {
+  color: var(--text-muted);
+}
+
+/* --- 7. TASK LIST ---------------------------------------------------------- */
+.tasks {
+  /* A <ul> arrives with bullets and indentation. Strip both. */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease),
+    opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+
+.task:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+/* An overdue task gets a coloured left edge — visible while scanning, and not
+   the only signal, since the due badge also says "Overdue" in words. Colour
+   alone is invisible to a colour-blind reader. */
+.task.is-overdue {
+  border-left: 3px solid var(--danger);
+}
+
+/* ---- The checkbox -----------------------------------------------------------
+   A REAL <input type="checkbox">, restyled — not a div pretending to be one.
+   `appearance: none` removes the browser's rendering and lets us draw our own,
+   while keeping the keyboard support, focus handling and screen reader
+   announcement we would otherwise have to rebuild by hand.
+
+   Restyle native elements. Do not replace them.
+   ---------------------------------------------------------------------------- */
+.task__checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.125rem 0 0;
+  flex-shrink: 0;
+  border: 1.75px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+
+.task__checkbox:hover {
+  border-color: var(--accent);
+}
+
+.task__checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The tick is drawn in CSS: a rectangle with two borders, rotated 45°. Still
+   the lightest way to draw a checkmark without an image. */
+.task__checkbox::after {
+  content: '';
+  position: absolute;
+  top: 0.125rem;
+  left: 0.3125rem;
+  width: 0.3125rem;
+  height: 0.5625rem;
+  border: solid var(--on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform var(--fast) var(--ease);
+}
+
+.task__checkbox:checked::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.task__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.task__title {
+  display: block;
+  /* A pasted URL would otherwise stretch the card off the screen. */
+  overflow-wrap: anywhere;
+  cursor: text;
+  border-radius: 4px;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+/* A hint that the title is editable, without shouting about it. */
+.task__title:hover {
+  background: var(--surface-sunken);
+  box-shadow: 0 0 0 3px var(--surface-sunken);
+}
+
+.task__edit {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0;
+  background: none;
+  font: inherit;
+}
+
+.task__edit:focus {
+  outline: none; /* the underline already shows where you are */
+}
+
+.task__meta {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.task__due {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  padding: 0.15rem var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 520;
+  white-space: nowrap;
+}
+
+.task__due .icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2;
+}
+
+.task.is-overdue .task__due {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* State lives in ONE class on the parent and everything that changes hangs off
+   it. JavaScript only toggles the word `is-done`; it never touches a colour. */
+.task.is-done .task__title {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-faint);
+}
+
+.task.is-done .task__due {
+  opacity: 0.5;
+}
+
+.task__delete {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+
+  /* Hidden until the row is hovered, so the list stays calm. It fades in
+     rather than appearing, which stops it feeling like a glitch. */
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease), background var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.task:hover .task__delete,
+/* Without this, a keyboard user tabbing to the button could never see it — a
+   hover-only affordance always needs a focus partner. */
+.task__delete:focus-visible {
+  opacity: 1;
+}
+
+.task__delete:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Touch screens have no hover, so the button would never appear. Ask the
+   device about its capabilities rather than guessing from screen width. */
+@media (hover: none) {
+  .task__delete {
+    opacity: 1;
+  }
+}
+
+.shortcut-hint {
+  margin: var(--space-5) 0 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+kbd {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* --- 8. EMPTY AND LOADING STATES ------------------------------------------- */
+.empty {
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+}
+
+.empty__icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--space-3);
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
+
+.empty__title {
+  margin: 0;
+  font-weight: 560;
+}
+
+.empty__hint {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton__row {
+  height: 3.25rem;
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* Staggering the rows makes the shimmer look like one wave crossing the list
+   rather than three lights blinking in unison. */
+.skeleton__row:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.skeleton__row:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* --- 9. TOAST -------------------------------------------------------------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: calc(100vw - var(--space-6));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-faint);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-lg);
+
+  /* translateX(-50%) is the other half of the centring: `left: 50%` puts the
+     left edge at the middle, and this pulls it back by half its own width.
+     Works at any width, unlike a fixed margin. */
+  transform: translateX(-50%);
+  animation: slide-up var(--slow) var(--ease);
+}
+
+.toast--error {
+  border-left-color: var(--danger);
+}
+
+.toast--neutral {
+  border-left-color: var(--accent);
+}
+
+.toast__action {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 580;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+
+.toast__action:hover {
+  background: var(--accent-soft);
+}
+
+/* --- 10. MOTION ------------------------------------------------------------ */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0.5rem);
+  }
+}
+
+@keyframes task-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.375rem);
+  }
+}
+
+/* Only a newly added task animates in. Animating the whole list on every
+   render would make ticking a checkbox look like the page reloaded. */
+.task.is-new {
+  animation: task-in var(--slow) var(--ease);
+}
+
+/* A task on its way out, while the delete request is still in flight. */
+.task.is-removing {
+  opacity: 0;
+  transform: scale(0.97);
+  pointer-events: none;
+}
+
+/* --- 11. SMALL SCREENS -----------------------------------------------------
+   Only a handful of rules, because everything above was built with flexbox and
+   max-widths rather than fixed sizes. Design for the flexible case first and
+   the mobile breakpoint becomes a tidy-up instead of a rewrite.
+   -------------------------------------------------------------------------- */
+@media (max-width: 34rem) {
+  body {
+    padding: var(--space-5) var(--space-3) var(--space-6);
+  }
+
+  .masthead__title {
+    font-size: 1.5rem;
+  }
+
+  /* The email is the first thing to go — the icons still work without it. */
+  .masthead__user {
+    display: none;
+  }
+
+  /* Give the date field its own row rather than crushing the title input. */
+  .composer {
+    flex-wrap: wrap;
+  }
+
+  .composer__input {
+    flex-basis: 100%;
+  }
+
+  .composer__due {
+    flex: 1;
+    width: auto;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters {
+    justify-content: space-between;
+  }
+
+  .filter {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .text-button {
+    align-self: flex-end;
+  }
+}

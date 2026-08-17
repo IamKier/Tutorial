@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+  ==========================================================================
+  client/index.html — THE ONLY PAGE
+  ==========================================================================
+
+  A React app ships one HTML file. Everything you see — the login screen, the
+  task list — is rendered into that single empty <div> by JavaScript.
+
+  This is also Vite's entry point: it reads the script tag below, follows the
+  imports from there, and builds the bundle. Which is why the src path points
+  at a .jsx file that no browser could load directly.
+  ==========================================================================
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tasks</title>
+
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1013" media="(prefers-color-scheme: dark)" />
+
+    <!--
+      Applies the saved theme before the first paint. It has to be a plain
+      blocking script, not part of the React bundle: React renders after the
+      page has already been painted once, which would mean a white flash on
+      every load for anyone who chose dark mode.
+
+      Files in client/public/ are copied to the site root untouched, so this
+      resolves to /boot.js in both dev and production.
+    -->
+    <script src="/boot.js"></script>
+
+    <!--
+      theme.css is linked rather than imported into the bundle, because the
+      lesson site under /learn also uses it and is plain static HTML. One file,
+      one palette, shared by both halves of the project.
+    -->
+    <link rel="stylesheet" href="/theme.css" />
+  </head>
+
+  <body>
+    <!-- React replaces the contents of this div. It is empty on purpose. -->
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

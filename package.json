@@ -1,0 +1,25 @@
+{
+  "name": "task-tracker",
+  "version": "3.0.0",
+  "description": "A fullstack React task tracker with accounts, on a hand-written Node backend.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "start": "node server.js",
+    "serve": "npm run build && node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.5",
+    "vite": "^8.2.1"
+  }
+}

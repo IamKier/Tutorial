@@ -1,0 +1,319 @@
+<h1>HTML: the basics <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  HTML answers exactly one question: what things are on this page? Not what they
+  look like — that is CSS — and not what they do, which is JavaScript. Keeping
+  those three jobs apart is the oldest good idea in web development.
+</p>
+
+<h2>An element</h2>
+
+<p>Almost everything in HTML is an element, and an element looks like this:</p>
+
+<pre><code>&lt;p&gt;Hello, world&lt;/p&gt;
+ ↑      ↑        ↑
+ |      |        closing tag
+ |      the content
+ opening tag</code></pre>
+
+<p>
+  The tag name says what kind of thing it is. <code>&lt;p&gt;</code> is a
+  paragraph, <code>&lt;h1&gt;</code> is a top-level heading,
+  <code>&lt;button&gt;</code> is a button. The browser already knows how each
+  one should behave.
+</p>
+
+<p>
+  A few elements have no content and so no closing tag — they are called void
+  elements:
+</p>
+
+<pre><code>&lt;img src="cat.jpg" alt="A cat asleep on a keyboard" /&gt;
+&lt;br /&gt;
+&lt;input type="text" /&gt;</code></pre>
+
+<h2>Attributes</h2>
+
+<p>
+  Attributes go in the opening tag and configure the element. They are always
+  <code>name="value"</code>:
+</p>
+
+<pre><code>&lt;a href="https://example.com" target="_blank"&gt;Visit example&lt;/a&gt;
+&lt;img src="logo.png" alt="Our logo" width="120" /&gt;
+&lt;input type="email" name="email" required /&gt;</code></pre>
+
+<p>Four attributes you will use constantly:</p>
+
+<table>
+  <thead>
+    <tr><th>Attribute</th><th>What it does</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>A unique name for one element. JavaScript finds elements by it.</td></tr>
+    <tr><td><code>class</code></td><td>A label you can put on many elements. CSS styles by it.</td></tr>
+    <tr><td><code>href</code> / <code>src</code></td><td>Where a link goes; where an image or script comes from.</td></tr>
+    <tr><td><code>alt</code></td><td>What an image shows, for people who cannot see it.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout--warn">
+  <span class="callout__title">An id must be unique</span>
+  <p>
+    Two elements with the same <code>id</code> is invalid HTML, and
+    <code>getElementById</code> will silently return only the first one. If you
+    want to label a group of elements, that is what <code>class</code> is for.
+  </p>
+</div>
+
+<h2>Nesting</h2>
+
+<p>
+  Elements go inside other elements, and that nesting forms a tree. Indent it
+  and the structure becomes obvious:
+</p>
+
+<pre><code>&lt;article&gt;
+  &lt;h2&gt;Making bread&lt;/h2&gt;
+  &lt;p&gt;It takes &lt;strong&gt;four&lt;/strong&gt; ingredients.&lt;/p&gt;
+  &lt;ul&gt;
+    &lt;li&gt;Flour&lt;/li&gt;
+    &lt;li&gt;Water&lt;/li&gt;
+    &lt;li&gt;Salt&lt;/li&gt;
+    &lt;li&gt;Yeast&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/article&gt;</code></pre>
+
+<p>
+  Tags must close in the reverse of the order they opened — innermost first.
+  This is wrong, even though it often still renders:
+</p>
+
+<pre><code>&lt;p&gt;&lt;strong&gt;Overlapping&lt;/p&gt;&lt;/strong&gt;   &lt;!-- wrong --&gt;
+&lt;p&gt;&lt;strong&gt;Correct&lt;/strong&gt;&lt;/p&gt;        &lt;!-- right --&gt;</code></pre>
+
+<p>
+  That tree is called the <strong>DOM</strong> — the Document Object Model — and
+  it is what JavaScript walks around in later. Every parent/child relationship
+  you write here becomes one you can navigate in code.
+</p>
+
+<h2>The shape of a page</h2>
+
+<p>Every HTML document has the same skeleton:</p>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;meta charset="UTF-8" /&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1" /&gt;
+    &lt;title&gt;My page&lt;/title&gt;
+    &lt;link rel="stylesheet" href="/styles.css" /&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Visible content goes here&lt;/h1&gt;
+    &lt;script src="/app.js"&gt;&lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<p>Line by line, because every one of these earns its place:</p>
+
+<ul>
+  <li><code>&lt;!DOCTYPE html&gt;</code> — tells the browser to use modern standards. Leave it out and you get a 1990s compatibility mode that breaks layouts in ways that are genuinely hard to debug.</li>
+  <li><code>lang="en"</code> — lets screen readers pick the right pronunciation and lets browsers offer translation.</li>
+  <li><code>charset="UTF-8"</code> — how to decode the bytes. Without it, accented characters and emoji turn to mojibake. It must be within the first 1024 bytes, which is why it goes first.</li>
+  <li><code>viewport</code> — without this line, phones render your page as a shrunken desktop site. It is the one-line foundation of responsive design.</li>
+  <li><code>&lt;head&gt;</code> holds information <em>about</em> the page; <code>&lt;body&gt;</code> holds what you see.</li>
+</ul>
+
+<div class="callout callout--note">
+  <span class="callout__title">See it for real</span>
+  <p>
+    Open <code>public/index.html</code> in the project. It is exactly this
+    skeleton with more inside the body. Everything above the
+    <code>&lt;body&gt;</code> tag is boilerplate you will type a hundred times.
+  </p>
+</div>
+
+<h2>The elements worth memorising</h2>
+
+<h3>Text</h3>
+
+<pre><code>&lt;h1&gt;Page title&lt;/h1&gt;        &lt;!-- one per page --&gt;
+&lt;h2&gt;A section&lt;/h2&gt;
+&lt;h3&gt;A subsection&lt;/h3&gt;
+
+&lt;p&gt;A paragraph of text.&lt;/p&gt;
+&lt;strong&gt;Important&lt;/strong&gt;   &lt;!-- bold, and means it --&gt;
+&lt;em&gt;Emphasised&lt;/em&gt;          &lt;!-- italic, and means it --&gt;
+&lt;code&gt;someVariable&lt;/code&gt;
+&lt;br /&gt;                        &lt;!-- a line break --&gt;</code></pre>
+
+<p>
+  Headings must not skip levels — <code>h1</code> then <code>h3</code> is
+  wrong. Screen reader users navigate a page by jumping between headings, and a
+  gap reads as a missing section. Pick the level for the structure, not the
+  size; CSS sets the size.
+</p>
+
+<h3>Lists</h3>
+
+<pre><code>&lt;ul&gt;                    &lt;!-- unordered: bullets --&gt;
+  &lt;li&gt;Flour&lt;/li&gt;
+  &lt;li&gt;Water&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;ol&gt;                    &lt;!-- ordered: numbers --&gt;
+  &lt;li&gt;Mix&lt;/li&gt;
+  &lt;li&gt;Knead&lt;/li&gt;
+&lt;/ol&gt;</code></pre>
+
+<p>
+  Only <code>&lt;li&gt;</code> may be a direct child of a list. Lists are
+  everywhere in real apps — the task tracker renders its tasks into a
+  <code>&lt;ul&gt;</code>, because a list of things is exactly what it is.
+</p>
+
+<h3>Links and images</h3>
+
+<pre><code>&lt;a href="/learn/"&gt;Same site&lt;/a&gt;
+&lt;a href="https://developer.mozilla.org"&gt;Another site&lt;/a&gt;
+&lt;a href="#section-2"&gt;Jump to an id on this page&lt;/a&gt;
+
+&lt;img src="/cat.jpg" alt="A ginger cat asleep on a keyboard" /&gt;
+&lt;img src="/divider.png" alt="" /&gt;   &lt;!-- decorative: empty alt --&gt;</code></pre>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Getting alt text right</span>
+  <p>
+    Describe the <em>purpose</em>, not the picture. For a photo, say what it
+    shows. For a purely decorative image, use <code>alt=""</code> — that tells a
+    screen reader to skip it. Leaving <code>alt</code> off entirely is the worst
+    option, because then the screen reader reads out the filename.
+  </p>
+</div>
+
+<h3>Grouping</h3>
+
+<pre><code>&lt;div&gt;A generic block. Starts on a new line.&lt;/div&gt;
+&lt;span&gt;A generic inline piece, sits within text.&lt;/span&gt;</code></pre>
+
+<p>
+  <code>div</code> and <code>span</code> mean nothing at all. They are for when
+  you need a box to hang styling on and no meaningful element fits. Reach for
+  them last — the <a href="#/html-semantic">semantics lesson</a> covers the
+  meaningful ones and why they are worth the effort.
+</p>
+
+<h2>Comments</h2>
+
+<pre><code>&lt;!-- This is not shown on the page --&gt;</code></pre>
+
+<p>
+  Comments are visible to anyone who views the page source. Never put anything
+  private in one.
+</p>
+
+<h2>Whitespace collapses</h2>
+
+<p>
+  HTML squashes any run of spaces, tabs and newlines into a single space. These
+  two produce identical output:
+</p>
+
+<pre><code>&lt;p&gt;Hello        world&lt;/p&gt;
+
+&lt;p&gt;Hello
+   world&lt;/p&gt;</code></pre>
+
+<p>
+  So indent your HTML freely for readability — it costs nothing. And when you
+  need space on the page, that is a CSS job (<code>margin</code>,
+  <code>padding</code>), never a row of <code>&amp;nbsp;</code>.
+</p>
+
+<h2>Exercises</h2>
+
+<p>Use the <code>scratch.html</code> file from the welcome lesson. Open it in a browser and reload after each change.</p>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">A recipe page</h3>
+  </div>
+  <p>
+    Build a page with: a main heading, a paragraph of introduction, a subheading
+    "Ingredients" with a bulleted list of four, a subheading "Method" with a
+    numbered list of three steps, and a link at the bottom to another site. Bold
+    one ingredient using <code>&lt;strong&gt;</code>.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;h1&gt;Simple bread&lt;/h1&gt;
+&lt;p&gt;Four ingredients and a lot of waiting.&lt;/p&gt;
+
+&lt;h2&gt;Ingredients&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;500g flour&lt;/strong&gt;&lt;/li&gt;
+  &lt;li&gt;350ml water&lt;/li&gt;
+  &lt;li&gt;10g salt&lt;/li&gt;
+  &lt;li&gt;7g yeast&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;Method&lt;/h2&gt;
+&lt;ol&gt;
+  &lt;li&gt;Mix everything into a rough dough.&lt;/li&gt;
+  &lt;li&gt;Rest for twelve hours.&lt;/li&gt;
+  &lt;li&gt;Bake at 230°C for 40 minutes.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;a href="https://www.kingarthurbaking.com"&gt;More recipes&lt;/a&gt;&lt;/p&gt;</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Read a real page</h3>
+  </div>
+  <p>
+    Open <code>public/index.html</code> from the project. Find the
+    <code>&lt;ul&gt;</code> that holds the tasks. Why is it empty in the file
+    even though tasks appear on screen? Then right-click the running app and
+    choose "Inspect" — how does what you see there differ from the file?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      The file is empty because JavaScript builds the list at runtime and inserts
+      it into the live page. "View source" shows the file as it was sent;
+      "Inspect" shows the DOM as it is <em>now</em>, including everything
+      JavaScript has added. Learning to tell those two apart saves a lot of
+      confusion later.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Break it on purpose</h3>
+  </div>
+  <p>
+    In your scratch file, delete the <code>&lt;/p&gt;</code> from one paragraph
+    and reload. Then remove <code>&lt;!DOCTYPE html&gt;</code> and reload. Then
+    put an <code>&lt;li&gt;</code> outside any list. Inspect each result. What
+    did the browser do about your mistakes?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      It quietly repaired them. Browsers are extraordinarily forgiving — they
+      have to be, because most of the web is malformed. That sounds convenient
+      and is actually a trap: your page may render fine while the DOM is not the
+      shape you think, and then a CSS selector or a <code>querySelector</code>
+      call fails for no visible reason. Write valid HTML and you never spend an
+      evening on that particular bug.
+    </p>
+  </details>
+</div>

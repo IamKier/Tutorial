@@ -1,0 +1,412 @@
+<h1>The DOM and events <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  The DOM is the live tree of objects the browser builds from your HTML.
+  JavaScript changes the page by changing that tree — never by editing the HTML
+  file, which was read once and forgotten.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">File versus DOM</span>
+  <p>
+    "View source" shows the HTML the server sent. "Inspect" shows the DOM as it
+    is right now, including everything JavaScript has added. In the task tracker
+    the task list is empty in the file and full in the inspector. Knowing which
+    one you are looking at prevents a lot of confusion.
+  </p>
+</div>
+
+<h2>Finding elements</h2>
+
+<pre><code>document.getElementById('task-list');      // by id, fastest
+document.querySelector('.task');           // FIRST match for a CSS selector
+document.querySelectorAll('.task');        // ALL matches
+
+// querySelector takes any CSS selector you already know
+document.querySelector('#task-form input[type="text"]');
+document.querySelectorAll('.task.is-done');</code></pre>
+
+<p>
+  <code>querySelectorAll</code> returns a NodeList, not an array. You can
+  <code>for...of</code> over it, but there is no <code>.map</code> or
+  <code>.filter</code> until you convert:
+</p>
+
+<pre><code>const tasks = [...document.querySelectorAll('.task')];
+tasks.map(el =&gt; el.dataset.id);</code></pre>
+
+<h3>Moving around the tree</h3>
+
+<pre><code>element.parentElement;
+element.children;
+element.nextElementSibling;
+
+// The one you will use constantly:
+element.closest('.task');   // nearest ancestor matching a selector</code></pre>
+
+<p>
+  <code>closest</code> walks <em>up</em> from an element until it finds a match.
+  It is what makes event delegation work, which is the second half of this
+  lesson.
+</p>
+
+<h2>Changing elements</h2>
+
+<h3>Content</h3>
+
+<pre><code>el.textContent = 'Buy milk';        // as text — safe
+el.innerHTML = '&lt;strong&gt;Hi&lt;/strong&gt;'; // parsed as HTML — dangerous</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">This is the one to get right</span>
+  <p>
+    <code>innerHTML</code> parses whatever you give it as markup. Put a user's
+    text through it and a task titled
+    <code>&lt;img src=x onerror=alert(1)&gt;</code> runs code in every visitor's
+    browser. That is cross-site scripting, and it is one of the most exploited
+    bugs on the web.
+  </p>
+  <p>
+    The rule is not "never use innerHTML" — it is <strong>never use it with
+    anything a user typed</strong>. In <code>app.js</code>, task titles use
+    <code>textContent</code>; the fixed SVG icon markup uses
+    <code>innerHTML</code>, because that string is ours.
+  </p>
+</div>
+
+<h3>Attributes and classes</h3>
+
+<pre><code>el.getAttribute('href');
+el.setAttribute('aria-pressed', 'true');
+el.removeAttribute('hidden');
+
+el.hidden = true;        // some attributes are also properties
+input.value = '';
+checkbox.checked = true;
+
+el.classList.add('is-done');
+el.classList.remove('is-done');
+el.classList.toggle('is-done');
+el.classList.toggle('is-done', task.done);   // force to a boolean
+el.classList.contains('is-done');</code></pre>
+
+<p>
+  That third <code>toggle</code> form — with a second argument — is the neatest
+  way to sync a class to a value, and it appears all over
+  <code>app.js</code>.
+</p>
+
+<h3>Custom data</h3>
+
+<pre><code>&lt;li data-id="abc-123" data-priority="high"&gt;</code></pre>
+
+<pre><code>el.dataset.id;         // 'abc-123'
+el.dataset.priority;   // 'high'
+el.dataset.id = 'xyz'; // sets data-id</code></pre>
+
+<p>
+  This is the standard place to attach your own data to an element. The task
+  tracker parks each task's id here so a click handler can read it back and know
+  which task was clicked.
+</p>
+
+<h3>Styles</h3>
+
+<pre><code>el.style.width = '60%';    // fine for a computed value</code></pre>
+
+<p>
+  Setting styles directly should be rare. Prefer toggling a class and letting
+  CSS decide what it looks like — otherwise your design ends up split across two
+  languages. The legitimate use is a value you can only know at runtime, like
+  the progress bar's width.
+</p>
+
+<h2>Creating and removing</h2>
+
+<pre><code>const li = document.createElement('li');
+li.className = 'task';
+li.textContent = 'Buy milk';
+
+parent.append(li);          // add at the end
+parent.prepend(li);         // add at the start
+li.remove();                // delete it
+
+parent.replaceChildren();           // remove all children
+parent.replaceChildren(a, b, c);    // replace everything in one go</code></pre>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Build once, insert once</span>
+  <p>
+    Every insertion can make the browser recalculate layout. Appending 100 items
+    one at a time can do that 100 times. Build them into a
+    <code>DocumentFragment</code> — a lightweight off-screen container — or an
+    array, then insert in a single call. Both <code>app.js</code> and
+    <code>learn.js</code> do this.
+  </p>
+</div>
+
+<pre><code>const fragment = document.createDocumentFragment();
+for (const task of tasks) fragment.append(taskElement(task));
+list.replaceChildren(fragment);</code></pre>
+
+<h2>Events</h2>
+
+<pre><code>button.addEventListener('click', (event) =&gt; {
+  console.log('clicked', event.target);
+});</code></pre>
+
+<p>The ones you will use:</p>
+
+<table>
+  <thead>
+    <tr><th>Event</th><th>Fires when</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>click</code></td><td>Clicked, or activated by keyboard on a real button</td></tr>
+    <tr><td><code>submit</code></td><td>A form is submitted — listen on the <em>form</em></td></tr>
+    <tr><td><code>input</code></td><td>A field's value changes, on every keystroke</td></tr>
+    <tr><td><code>change</code></td><td>A field is committed — on blur, or immediately for a checkbox</td></tr>
+    <tr><td><code>keydown</code></td><td>A key goes down. <code>event.key</code> is <code>'Enter'</code>, <code>'Escape'</code>…</td></tr>
+    <tr><td><code>DOMContentLoaded</code></td><td>The HTML is parsed</td></tr>
+  </tbody>
+</table>
+
+<h3>The event object</h3>
+
+<pre><code>event.target           // the element that was actually clicked
+event.currentTarget    // the element the listener is attached to
+event.key              // for keyboard events
+event.preventDefault() // cancel the browser's default behaviour
+event.stopPropagation()// stop it bubbling further up</code></pre>
+
+<p>
+  <code>target</code> versus <code>currentTarget</code> is worth pausing on. If
+  you listen on a <code>&lt;ul&gt;</code> and someone clicks a button inside an
+  <code>&lt;li&gt;</code>, then <code>currentTarget</code> is the
+  <code>&lt;ul&gt;</code> and <code>target</code> is the button.
+</p>
+
+<h3>preventDefault</h3>
+
+<pre><code>form.addEventListener('submit', (event) =&gt; {
+  event.preventDefault();   // stop the full-page reload
+  // ...handle it with fetch instead
+});</code></pre>
+
+<p>
+  Forms navigate, links navigate, right-clicks open menus. All of that is
+  default behaviour you can cancel. The form case is the one you will write most
+  often — leave it out and the page flashes and resets on every submit.
+</p>
+
+<h2>Bubbling and delegation</h2>
+
+<p>
+  An event fires on the element you interacted with, then travels up through
+  every ancestor. Click a button inside an <code>&lt;li&gt;</code> inside a
+  <code>&lt;ul&gt;</code> and all three see the click.
+</p>
+
+<p>That sounds like trivia. It enables the most useful pattern in DOM work:</p>
+
+<pre><code>// One listener for every task, including ones that do not exist yet
+list.addEventListener('click', (event) =&gt; {
+  const li = event.target.closest('.task');
+  if (!li) return;                    // clicked the gap between rows
+
+  const id = li.dataset.id;
+
+  if (event.target.matches('.task__checkbox')) {
+    toggleTask(id);
+  }
+
+  if (event.target.closest('.task__delete')) {
+    deleteTask(id);
+  }
+});</code></pre>
+
+<p>Why bother, instead of a listener per button?</p>
+
+<ul>
+  <li>Tasks are created and destroyed constantly. Per-element listeners have to be attached to every new element and cleaned up on every removal.</li>
+  <li>One listener uses less memory than five hundred.</li>
+  <li>It works for elements added after the listener was attached — which is most of them.</li>
+</ul>
+
+<div class="callout callout--note">
+  <span class="callout__title">matches versus closest</span>
+  <p>
+    The checkbox uses <code>matches</code> because the click always lands on the
+    checkbox itself. The delete button uses <code>closest</code> because it
+    contains an SVG icon, and clicking the icon makes the
+    <code>&lt;svg&gt;</code> the target, not the button. Missing this produces a
+    button that works everywhere except on its own icon.
+  </p>
+</div>
+
+<h2>The render pattern</h2>
+
+<p>
+  Here is the idea that holds a frontend together, and it is worth more than any
+  individual API on this page.
+</p>
+
+<p>
+  Keep your data in one place. Write one function that draws the screen from
+  that data. When something changes, change the data and redraw.
+</p>
+
+<pre><code>let tasks = [];        // the single source of truth
+
+function render() {
+  list.replaceChildren(...tasks.map(taskElement));
+  countEl.textContent = `${tasks.filter(t =&gt; t.done).length} done`;
+}
+
+// Every change follows the same two steps
+tasks.push(newTask);
+render();</code></pre>
+
+<p>
+  The alternative is to reach into the page and tweak the one element that
+  changed. It is faster, and it works until two different things can modify the
+  same element — at which point the page's state and your data quietly disagree
+  and you cannot reason about either.
+</p>
+
+<p>
+  Redrawing everything is slower and vastly easier to get right. That trade is
+  correct at this size, and React's whole value proposition is doing exactly
+  this, fast enough that you never need the alternative.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">A counter</h3>
+  </div>
+  <p>
+    Build a page with a number, a "+" button and a "−" button. Use a variable as
+    the source of truth and a <code>render()</code> function to display it.
+    Never read the number back out of the DOM.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;p id="display"&gt;0&lt;/p&gt;
+&lt;button id="up"&gt;+&lt;/button&gt;
+&lt;button id="down"&gt;−&lt;/button&gt;
+
+&lt;script&gt;
+  let count = 0;
+  const display = document.getElementById('display');
+
+  function render() {
+    display.textContent = count;
+  }
+
+  document.getElementById('up').addEventListener('click', () =&gt; {
+    count++;
+    render();
+  });
+
+  document.getElementById('down').addEventListener('click', () =&gt; {
+    count--;
+    render();
+  });
+
+  render();
+&lt;/script&gt;</code></pre>
+    <p>
+      The discipline here is not reading <code>display.textContent</code> to find
+      the current count. The DOM is an output, not a database.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">A list with delegation</h3>
+  </div>
+  <p>
+    A text input, an "Add" button and a <code>&lt;ul&gt;</code>. Adding puts the
+    text in the list with a "remove" button beside it. Use <strong>one</strong>
+    click listener on the <code>&lt;ul&gt;</code> for all the remove buttons, no
+    matter how many items exist.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;input id="text" /&gt;&lt;button id="add"&gt;Add&lt;/button&gt;
+&lt;ul id="list"&gt;&lt;/ul&gt;
+
+&lt;script&gt;
+  let items = [];
+  const list = document.getElementById('list');
+  const input = document.getElementById('text');
+
+  function render() {
+    list.replaceChildren(...items.map((text, index) =&gt; {
+      const li = document.createElement('li');
+      li.dataset.index = index;
+
+      const span = document.createElement('span');
+      span.textContent = text;      // textContent, not innerHTML
+
+      const button = document.createElement('button');
+      button.className = 'remove';
+      button.textContent = 'remove';
+
+      li.append(span, button);
+      return li;
+    }));
+  }
+
+  document.getElementById('add').addEventListener('click', () =&gt; {
+    if (!input.value.trim()) return;
+    items.push(input.value.trim());
+    input.value = '';
+    render();
+  });
+
+  // ONE listener, for every item that ever exists
+  list.addEventListener('click', (event) =&gt; {
+    if (!event.target.matches('.remove')) return;
+    const index = Number(event.target.closest('li').dataset.index);
+    items = items.filter((_, i) =&gt; i !== index);
+    render();
+  });
+&lt;/script&gt;</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Prove the XSS risk</h3>
+  </div>
+  <p>
+    In the app, add a task titled
+    <code>&lt;img src=x onerror="alert('hacked')"&gt;</code>. Nothing happens —
+    good. Now edit <code>app.js</code>, change <code>title.textContent</code> to
+    <code>title.innerHTML</code>, reload, and add it again. Change it back
+    afterwards.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      With <code>innerHTML</code> the browser parses your title as markup,
+      creates a real <code>&lt;img&gt;</code>, fails to load
+      <code>src="x"</code>, and runs the <code>onerror</code> handler. An alert
+      box is harmless; the same hole reads cookies, steals session tokens or
+      posts to your API as the logged-in user.
+    </p>
+    <p>
+      Now notice how thoroughly this is stored: the title went to the server,
+      into <code>tasks.json</code>, and back out again. Every visitor who loads
+      the list runs it. That is a <em>stored</em> XSS, the worst kind — and the
+      entire fix was one word.
+    </p>
+  </details>
+</div>

@@ -1,0 +1,327 @@
+<h1>Layout: flexbox and grid <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  Layout used to be the hardest part of CSS. Flexbox and grid replaced all of
+  the old tricks, and between them they handle essentially everything. The only
+  real question is which of the two you want.
+</p>
+
+<h2>Choosing between them</h2>
+
+<ul>
+  <li><strong>Flexbox</strong> lays things out along <em>one</em> axis — a row or a column. The children decide how much room they need.</li>
+  <li><strong>Grid</strong> lays things out in <em>two</em> — rows and columns at once. The container decides the shape.</li>
+</ul>
+
+<p>
+  Rule of thumb: a toolbar, a list, a card's contents, a button with an icon
+  next to text — flexbox. A page shell, a photo gallery, a dashboard — grid.
+  Mixing them is normal; this site's shell is a grid whose sidebar is a flex
+  column.
+</p>
+
+<h2>Flexbox</h2>
+
+<p>
+  Set <code>display: flex</code> on the parent and its direct children become
+  flex items, laid out in a row.
+</p>
+
+<pre><code>.toolbar {
+  display: flex;
+  gap: 0.5rem;               /* space BETWEEN items */
+  align-items: center;       /* cross axis: vertical here */
+  justify-content: space-between;  /* main axis: horizontal here */
+}</code></pre>
+
+<h3>The two axes</h3>
+
+<p>
+  This is the concept that makes flexbox click. The <strong>main axis</strong>
+  is the direction items flow; the <strong>cross axis</strong> is perpendicular
+  to it. <code>justify-content</code> always works along the main axis and
+  <code>align-items</code> along the cross axis.
+</p>
+
+<p>
+  With <code>flex-direction: row</code> (the default), main is horizontal. Flip
+  to <code>column</code> and main becomes vertical — and now
+  <code>justify-content</code> moves things up and down. That swap is why the
+  properties feel arbitrary until it clicks.
+</p>
+
+<pre><code>flex-direction: row | row-reverse | column | column-reverse;
+
+justify-content: flex-start | center | flex-end
+               | space-between   /* first and last pinned to the edges */
+               | space-around
+               | space-evenly;
+
+align-items: stretch   /* default: equal heights */
+           | flex-start | center | flex-end | baseline;</code></pre>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Centring, finally solved</span>
+  <p>
+    Perfect centring in both directions used to take a hack. Now it is three
+    lines: <code>display: flex; align-items: center; justify-content: center;</code>
+    — or, for a single child, <code>display: grid; place-items: center;</code>,
+    which is what the icon buttons in this project use.
+  </p>
+</div>
+
+<h3>How items share space</h3>
+
+<pre><code>.item {
+  flex-grow: 1;     /* take a share of leftover space */
+  flex-shrink: 1;   /* give up space when crowded */
+  flex-basis: auto; /* starting size before grow/shrink */
+
+  flex: 1;          /* shorthand for 1 1 0 — "share equally" */
+}</code></pre>
+
+<p>The pattern you will use most:</p>
+
+<pre><code>.composer {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.composer__input  { flex: 1; min-width: 0; }  /* takes the rest */
+.composer__submit { }                          /* stays its natural size */</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">min-width: 0 — the fix you will need one day</span>
+  <p>
+    A flex item refuses to shrink below the size of its content. So one long
+    unbroken word or a wide table blows the whole row out and the page scrolls
+    sideways. <code>min-width: 0</code> lets the item shrink properly. When a
+    flex layout overflows for no visible reason, this is almost always the
+    answer — and it is why <code>.composer__input</code> has that line.
+  </p>
+</div>
+
+<h3>Wrapping</h3>
+
+<pre><code>.tags {
+  display: flex;
+  flex-wrap: wrap;   /* onto a new line rather than squeezing */
+  gap: 0.5rem;
+}</code></pre>
+
+<p>
+  By default flex items never wrap; they just get narrower until they cannot.
+  Add <code>flex-wrap: wrap</code> for anything that could be a long list.
+</p>
+
+<h2>Grid</h2>
+
+<pre><code>.layout {
+  display: grid;
+  grid-template-columns: 17rem 1fr;
+  min-height: 100vh;
+}</code></pre>
+
+<p>
+  That is this page's shell: a fixed 17rem sidebar and a content column taking
+  everything left over. The <code>fr</code> unit means "a share of the free
+  space", and it is what makes grid layouts survive odd window sizes where
+  percentages break.
+</p>
+
+<pre><code>grid-template-columns: 200px 1fr;        /* fixed + flexible */
+grid-template-columns: 1fr 1fr 1fr;      /* three equal */
+grid-template-columns: repeat(3, 1fr);   /* same, less typing */
+grid-template-columns: 2fr 1fr;          /* one twice as wide */
+
+gap: 1rem;
+row-gap: 1rem;
+column-gap: 2rem;</code></pre>
+
+<h3>A gallery that responds without media queries</h3>
+
+<pre><code>.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+}</code></pre>
+
+<p>Read it inside out:</p>
+
+<ul>
+  <li><code>minmax(14rem, 1fr)</code> — each column is at least 14rem, and grows to share what is left.</li>
+  <li><code>auto-fill</code> — fit as many of those as the container allows.</li>
+</ul>
+
+<p>
+  The result reflows from four columns to one as the window narrows, with no
+  breakpoints at all. It responds to the actual space available rather than to
+  guesses about screen sizes.
+</p>
+
+<h3>Placing items explicitly</h3>
+
+<pre><code>.featured {
+  grid-column: 1 / 3;   /* from line 1 to line 3 — spans two columns */
+  grid-row: 1 / 3;
+}
+
+.wide {
+  grid-column: span 2;  /* two columns, wherever it lands */
+}</code></pre>
+
+<p>
+  Grid counts <em>lines</em>, not columns, so a three-column grid has four
+  lines. <code>1 / 3</code> means "start at line 1, end at line 3" — which
+  covers two columns. Off-by-one confusion here is normal; DevTools has a grid
+  overlay that draws the numbered lines on the page, and it makes this obvious.
+</p>
+
+<h2>Positioning</h2>
+
+<pre><code>position: static;    /* the default — normal flow */
+position: relative;  /* nudge from its normal spot; keeps its space */
+position: absolute;  /* removed from flow; positioned within the nearest
+                        positioned ancestor */
+position: fixed;     /* positioned against the viewport; stays on scroll */
+position: sticky;    /* normal until it hits a threshold, then sticks */</code></pre>
+
+<p>The rule people miss about <code>absolute</code>:</p>
+
+<pre><code>.card   { position: relative; }   /* ← the anchor */
+.badge  { position: absolute; top: 0.5rem; right: 0.5rem; }</code></pre>
+
+<p>
+  An absolutely positioned element is placed relative to its nearest ancestor
+  that has a <code>position</code> other than <code>static</code>. Forget to
+  make the parent <code>relative</code> and your badge flies to the corner of
+  the page instead of the corner of the card.
+</p>
+
+<p><code>sticky</code> is the quiet hero — it needs an offset to do anything:</p>
+
+<pre><code>.sidebar {
+  position: sticky;
+  top: 0;            /* required, or it never sticks */
+  height: 100vh;
+  overflow-y: auto;
+}</code></pre>
+
+<p>
+  That is exactly how this page's sidebar stays put while the lesson scrolls,
+  and it is four lines instead of the JavaScript scroll listener people used to
+  write.
+</p>
+
+<h2>Stacking</h2>
+
+<pre><code>z-index: 10;</code></pre>
+
+<p>
+  Higher numbers sit in front — but only among positioned elements, and only
+  within the same stacking context. Certain properties (<code>transform</code>,
+  <code>opacity</code> below 1, <code>filter</code>) create a new context, which
+  traps children inside it. That is why a <code>z-index: 9999</code> sometimes
+  refuses to come to the front: it is competing inside a box, not on the page.
+  Keep a small, deliberate set of z-index values rather than escalating.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">A navigation bar</h3>
+  </div>
+  <p>
+    Build a bar with a logo on the left and three links on the right, vertically
+    centred, with even spacing between the links. Flexbox only, and no fixed
+    widths.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;header class="bar"&gt;
+  &lt;div class="logo"&gt;Acme&lt;/div&gt;
+  &lt;nav class="links"&gt;
+    &lt;a href="#"&gt;Home&lt;/a&gt;
+    &lt;a href="#"&gt;Docs&lt;/a&gt;
+    &lt;a href="#"&gt;About&lt;/a&gt;
+  &lt;/nav&gt;
+&lt;/header&gt;
+
+&lt;style&gt;
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.links {
+  display: flex;
+  gap: 1.5rem;
+}
+&lt;/style&gt;</code></pre>
+    <p>
+      Two flex containers, one nested in the other. That nesting is the normal
+      way to build layouts — not one clever container doing everything.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">A responsive gallery</h3>
+  </div>
+  <p>
+    Lay out twelve cards so they fill the width in as many columns as fit, each
+    at least 12rem wide, with a 1rem gap — and no media queries. Resize the
+    window and watch the column count change.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 1rem;
+}</code></pre>
+    <p>
+      Try swapping <code>auto-fill</code> for <code>auto-fit</code> with only
+      three cards in a wide window. <code>auto-fill</code> keeps the empty
+      columns and the cards stay narrow; <code>auto-fit</code> collapses them so
+      the three cards stretch to fill the row.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Read this page's layout</h3>
+  </div>
+  <p>
+    Open <code>public/learn/learn.css</code> and find <code>.layout</code>. Why
+    is the second column <code>1fr</code> rather than a percentage? Then find
+    what happens to <code>.sidebar</code> below 60rem — how does a two-column
+    layout become a slide-out drawer?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      <code>1fr</code> means "whatever is left after the sidebar takes its
+      17rem". A percentage cannot express that — you would have to recalculate
+      it for every window width, and it would break the moment the sidebar
+      width changed.
+    </p>
+    <p>
+      In the media query the grid drops to a single column, so the sidebar is no
+      longer part of the flow at all. It becomes <code>position: fixed</code>
+      and is pushed off-screen with <code>transform: translateX(-100%)</code>;
+      adding the <code>is-open</code> class slides it back to zero. Animating
+      <code>transform</code> rather than <code>left</code> keeps the movement on
+      the GPU, which is the difference between a smooth slide and a stuttering
+      one.
+    </p>
+  </details>
+</div>

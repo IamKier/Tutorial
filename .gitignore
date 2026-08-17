@@ -1,0 +1,22 @@
+# Dependencies. Rebuilt from package-lock.json with `npm install`.
+node_modules/
+
+# Build output. Derived from client/ by `npm run build` — committing it would
+# make every change show up twice in a diff.
+dist/
+
+# The database, and SQLite's write-ahead log and shared-memory files.
+# Never commit these: they hold real accounts, password hashes and tasks.
+data/
+
+# Environment files. These hold secrets by definition.
+.env
+.env.*
+!.env.example
+
+# Logs and OS clutter
+*.log
+*.out
+*.err
+.DS_Store
+Thumbs.db

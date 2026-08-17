@@ -1,0 +1,364 @@
+<h1>Building a REST API <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  An API is a contract: these URLs exist, they accept this, they return that.
+  Design it well and the frontend almost writes itself. Design it badly and
+  every screen needs a special case.
+</p>
+
+<h2>What REST actually means</h2>
+
+<p>
+  Strip away the arguments and it comes to this: <strong>URLs name things,
+  methods say what to do to them.</strong>
+</p>
+
+<pre><code>GET    /api/tasks       list them
+POST   /api/tasks       create one
+GET    /api/tasks/:id   read one
+PATCH  /api/tasks/:id   change one
+DELETE /api/tasks/:id   remove one</code></pre>
+
+<p>
+  A plural noun for the collection, the same noun plus an id for one item. Once
+  you follow that, another developer can guess your API before reading its
+  documentation — which is the entire point of a convention.
+</p>
+
+<pre><code>❌ /api/getTasks           the verb belongs in the method
+❌ /api/task/delete/5      same
+❌ /api/tasksList          pick one and stick to it
+✅ /api/tasks
+✅ /api/tasks/5</code></pre>
+
+<p>Nesting shows a relationship:</p>
+
+<pre><code>GET  /api/projects/7/tasks     tasks belonging to project 7
+POST /api/projects/7/tasks     create one there</code></pre>
+
+<p>
+  Stop at one level. <code>/api/users/1/projects/7/tasks/3/comments</code> is a
+  URL nobody can read; once you have the task id, <code>/api/tasks/3/comments</code>
+  says the same thing.
+</p>
+
+<h2>Routing by hand</h2>
+
+<p>
+  "Routing" sounds grand. It is: look at the method and path, decide which
+  function runs.
+</p>
+
+<pre><code>async function handleApi(req, res, url) {
+  const { method } = req;
+
+  // '/api/tasks/abc-123' -> ['api', 'tasks', 'abc-123']
+  // filter(Boolean) drops the empty strings the slashes create.
+  const segments = url.pathname.split('/').filter(Boolean);
+  const resource = segments[1];   // 'tasks'
+  const id = segments[2];         // the id, or undefined
+
+  if (resource !== 'tasks') {
+    return sendJson(res, 404, { error: 'Unknown API resource' });
+  }
+
+  // Collection routes: /api/tasks
+  if (!id) {
+    if (method === 'GET') return sendJson(res, 200, await db.listTasks());
+    if (method === 'POST') return createTask(req, res);
+    return sendJson(res, 405, { error: `Method ${method} not allowed` });
+  }
+
+  // Item routes: /api/tasks/:id
+  if (method === 'PATCH') return updateTask(req, res, id);
+  if (method === 'DELETE') return deleteTask(res, id);
+  return sendJson(res, 405, { error: `Method ${method} not allowed` });
+}</code></pre>
+
+<p>Express does the same job with less typing:</p>
+
+<pre><code>app.get('/api/tasks', handler);
+app.post('/api/tasks', handler);
+app.patch('/api/tasks/:id', handler);</code></pre>
+
+<p>
+  Its router is a more capable version of those if-statements. Having written
+  them once, you know what it is doing rather than trusting it.
+</p>
+
+<h2>Validate everything</h2>
+
+<p>This is the part that separates a toy from something you can deploy.</p>
+
+<pre><code>const body = await readJsonBody(req);
+
+// 1. Right type?
+const title = typeof body.title === 'string' ? body.title.trim() : '';
+
+// 2. Present?
+if (!title) {
+  return sendJson(res, 400, { error: 'A non-empty "title" is required' });
+}
+
+// 3. Within limits?
+if (title.length &gt; 200) {
+  return sendJson(res, 400, { error: 'Title must be 200 characters or fewer' });
+}</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The browser form is not a defence</span>
+  <p>
+    Your page marks the field <code>required</code>. That helps honest users and
+    stops nobody else — anyone can send a request straight to your API with
+    PowerShell, curl or Postman, and never load your page at all. Every single
+    input has to be re-checked here.
+  </p>
+</div>
+
+<h3>Never trust the shape either</h3>
+
+<pre><code>// DANGEROUS
+Object.assign(task, changes);
+
+// SAFE — copy only the fields you mean to allow
+if (typeof changes.title === 'string') task.title = changes.title;
+if (typeof changes.done === 'boolean') task.done = changes.done;</code></pre>
+
+<p>
+  With the first version, a request body of
+  <code>{"id": "someone-elses-id", "isAdmin": true}</code> writes whatever it
+  likes into your record. This is called <strong>mass assignment</strong>, and
+  it has caused real breaches at real companies. An allow-list is the fix, and
+  it is three lines.
+</p>
+
+<h2>Answering consistently</h2>
+
+<pre><code>function sendJson(res, statusCode, data) {
+  const body = JSON.stringify(data);
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': Buffer.byteLength(body),
+  });
+  res.end(body);
+}</code></pre>
+
+<p>
+  One helper, used everywhere, means you cannot forget a header on one route.
+  Note <code>Buffer.byteLength</code> rather than <code>body.length</code> —
+  a string's length counts characters, and an emoji or an accented letter is
+  more than one byte. Get that wrong and the client waits for data that never
+  comes.
+</p>
+
+<p>Keep errors in one predictable shape:</p>
+
+<pre><code>{ "error": "Title must be 200 characters or fewer" }</code></pre>
+
+<p>
+  Because the frontend can then always read <code>body.error</code>. Look at the
+  <code>request()</code> wrapper in <code>app.js</code>: it pulls that field out
+  and shows it in the toast, so the server's message reaches the user unchanged.
+</p>
+
+<h2>Errors and the catch-all</h2>
+
+<pre><code>const server = http.createServer(async (req, res) =&gt; {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
+  try {
+    if (url.pathname.startsWith('/api/')) await handleApi(req, res, url);
+    else await serveStatic(res, url);
+  } catch (err) {
+    console.error('Unhandled error:', err);
+
+    // headersSent guards against responding twice, which throws. If a handler
+    // already started sending, the only thing left to do is hang up.
+    if (!res.headersSent) {
+      sendJson(res, 500, { error: 'Internal server error' });
+    } else {
+      res.end();
+    }
+  }
+});</code></pre>
+
+<p>
+  Without this, one bug in one handler takes down the whole process and
+  disconnects everybody. With it, that request gets a clean 500 and the server
+  carries on.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never send the raw error to the client</span>
+  <p>
+    <code>{ error: err.message }</code> looks helpful and leaks file paths,
+    library versions and sometimes SQL. Log the detail on the server where you
+    can read it; send the user a generic message. The exceptions are the
+    validation errors you wrote deliberately — those are meant to be read.
+  </p>
+</div>
+
+<h2>Serving files safely</h2>
+
+<p>The other half of <code>server.js</code>, and it contains the sharpest edge:</p>
+
+<pre><code>const filePath = path.join(PUBLIC_DIR, requestedPath);
+
+if (filePath !== PUBLIC_DIR &amp;&amp; !filePath.startsWith(PUBLIC_DIR + path.sep)) {
+  res.writeHead(403);
+  return res.end('403 Forbidden');
+}</code></pre>
+
+<p>
+  Without that check, <code>GET /../../db.js</code> — or worse,
+  <code>/../../../../etc/passwd</code> — escapes your public folder and hands
+  out any file on the machine. It is called <strong>path traversal</strong>, it
+  is decades old, and it still ships regularly.
+</p>
+
+<p>Two details in that check:</p>
+
+<ul>
+  <li>Resolve first, then verify the <em>result</em> is inside the folder. Never try to strip <code>..</code> out of the string — attackers have a long list of encodings for it.</li>
+  <li>The trailing <code>path.sep</code> matters: without it, a folder called <code>public-secret</code> next to <code>public</code> would also pass, because its path starts with the same letters.</li>
+</ul>
+
+<h2>Query parameters</h2>
+
+<pre><code>// GET /api/tasks?status=done&amp;limit=10
+const status = url.searchParams.get('status');
+const limit = Number(url.searchParams.get('limit')) || 50;</code></pre>
+
+<p>
+  Use the path for <em>what</em> you want and the query string for
+  <em>which ones</em> — filtering, sorting, pagination. And validate these too:
+  <code>?limit=99999999</code> is a denial-of-service waiting to happen, so cap
+  it.
+</p>
+
+<h2>Status codes, briefly</h2>
+
+<table>
+  <thead>
+    <tr><th>Situation</th><th>Code</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Listed or updated something</td><td><code>200</code></td></tr>
+    <tr><td>Created something</td><td><code>201</code></td></tr>
+    <tr><td>Deleted something</td><td><code>204</code> (no body)</td></tr>
+    <tr><td>Their input was invalid</td><td><code>400</code></td></tr>
+    <tr><td>Not logged in</td><td><code>401</code></td></tr>
+    <tr><td>Logged in, not allowed</td><td><code>403</code></td></tr>
+    <tr><td>No such id</td><td><code>404</code></td></tr>
+    <tr><td>Right path, wrong method</td><td><code>405</code></td></tr>
+    <tr><td>Your code threw</td><td><code>500</code></td></tr>
+  </tbody>
+</table>
+
+<h2>What comes next in a real API</h2>
+
+<ul>
+  <li><strong>Authentication</strong> — who is this? Sessions with cookies first; tokens later.</li>
+  <li><strong>Authorisation</strong> — may <em>this</em> user touch <em>this</em> record? Check on every request, not just at login.</li>
+  <li><strong>Rate limiting</strong> — cap requests per IP, or one script can flatten you.</li>
+  <li><strong>Pagination</strong> — never return an unbounded list. It is fine with twelve tasks and fatal with fifty thousand.</li>
+  <li><strong>CORS</strong> — only if the frontend is served from a different origin. It is not needed here because one server does both.</li>
+  <li><strong>Versioning</strong> — <code>/api/v1/tasks</code>, so you can change the contract without breaking old clients.</li>
+</ul>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Design the endpoints</h3>
+  </div>
+  <p>
+    Sketch the URLs and methods for a blog with posts and comments: list posts,
+    read one, create one, edit one, delete one, list a post's comments, add a
+    comment, delete a comment. No implementation — just the contract.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>GET    /api/posts
+POST   /api/posts
+GET    /api/posts/:id
+PATCH  /api/posts/:id
+DELETE /api/posts/:id
+
+GET    /api/posts/:id/comments
+POST   /api/posts/:id/comments
+DELETE /api/comments/:commentId</code></pre>
+    <p>
+      Note the last one. Deleting a comment is nested under
+      <code>/comments</code>, not under its post — once you have the comment's
+      own id, the post adds nothing but length. Nest to <em>find</em> things,
+      not to act on things you can already identify.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Add a filter</h3>
+  </div>
+  <p>
+    Make <code>GET /api/tasks?status=done</code> work in
+    <code>server.js</code>. Accept <code>done</code>, <code>active</code> and
+    nothing at all; reject anything else with a 400. Test it from PowerShell.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>if (method === 'GET') {
+  const status = url.searchParams.get('status');
+
+  if (status &amp;&amp; !['done', 'active'].includes(status)) {
+    return sendJson(res, 400, {
+      error: 'status must be "done" or "active"',
+    });
+  }
+
+  let tasks = await db.listTasks();
+  if (status === 'done') tasks = tasks.filter(t =&gt; t.done);
+  if (status === 'active') tasks = tasks.filter(t =&gt; !t.done);
+
+  return sendJson(res, 200, tasks);
+}</code></pre>
+<pre><code>Invoke-RestMethod -Uri "http://localhost:3000/api/tasks?status=done"</code></pre>
+    <p>
+      Rejecting unknown values rather than silently ignoring them is deliberate:
+      a typo like <code>?status=complete</code> should tell you it is wrong, not
+      quietly return everything and leave you wondering why the filter does
+      nothing.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Attack your own server</h3>
+  </div>
+  <p>Try each of these against the running app and explain what protects you:</p>
+<pre><code>Invoke-RestMethod -Uri "http://localhost:3000/api/tasks" -Method Post `
+  -ContentType 'application/json' -Body '{"title":""}'
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/tasks" -Method Post `
+  -ContentType 'application/json' -Body '{"title":123}'
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/tasks" -Method Post `
+  -ContentType 'application/json' -Body 'not json at all'
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/tasks/xyz" -Method Patch `
+  -ContentType 'application/json' -Body '{"id":"hijacked","done":true}'</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><strong>400.</strong> The title is empty after trimming.</li>
+      <li><strong>400.</strong> The <code>typeof body.title === 'string'</code> check rejects a number before anything else looks at it.</li>
+      <li><strong>500.</strong> <code>JSON.parse</code> throws, the catch-all turns it into a clean error. Arguably it should be a 400 — malformed input is the caller's mistake. Try fixing that.</li>
+      <li><strong>404</strong>, because there is no task <code>xyz</code>. Try it with a real id: the task updates, but the <code>id</code> field is untouched — <code>updateTask</code> copies only <code>title</code> and <code>done</code>. That is the mass-assignment guard doing its job.</li>
+    </ol>
+  </details>
+</div>

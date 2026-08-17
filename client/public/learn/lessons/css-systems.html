@@ -1,0 +1,374 @@
+<h1>Variables, themes, responsive <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  This is the difference between a page that is styled and a product that has a
+  design. Nothing here is difficult — it is about deciding your values once and
+  then refusing to invent new ones.
+</p>
+
+<h2>Custom properties</h2>
+
+<p>CSS has real variables. They start with two dashes:</p>
+
+<pre><code>:root {
+  --accent: #4f46e5;
+  --space-4: 1rem;
+  --radius: 12px;
+}
+
+.button {
+  background: var(--accent);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+}</code></pre>
+
+<p>
+  <code>:root</code> is the <code>&lt;html&gt;</code> element, so anything
+  defined there is available to the whole document. And unlike a variable in a
+  preprocessor, these are live in the browser — change one at runtime and
+  everything using it updates immediately.
+</p>
+
+<pre><code>/* Read and write from JavaScript */
+const styles = getComputedStyle(document.documentElement);
+styles.getPropertyValue('--accent');
+
+document.documentElement.style.setProperty('--accent', 'tomato');</code></pre>
+
+<p>They cascade and can be overridden per component:</p>
+
+<pre><code>.card { --padding: 1rem; padding: var(--padding); }
+.card--roomy { --padding: 2rem; }   /* same rule, new value */</code></pre>
+
+<p>And they take a fallback for when the variable is not defined:</p>
+
+<pre><code>color: var(--brand, #333);</code></pre>
+
+<h2>Tokens</h2>
+
+<p>
+  A design system is mostly a short list of allowed values, which people call
+  tokens. Open <code>public/theme.css</code> — the whole first section is
+  nothing but this:
+</p>
+
+<pre><code>:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+}</code></pre>
+
+<p>
+  Note that the scale is not 1, 2, 3, 4 — it grows by roughly a factor each
+  step. That is what the eye reads as deliberate. Every gap and padding in the
+  project comes from that list, and the moment you catch yourself typing
+  <code>padding: 13px</code>, the design has started to drift.
+</p>
+
+<p>The same applies to type, radius, shadow and motion:</p>
+
+<pre><code>--text-sm: 0.875rem;
+--text-base: 0.9375rem;
+--text-lg: 1.125rem;
+
+--radius-sm: 8px;
+--radius: 12px;
+
+--ease: cubic-bezier(0.2, 0, 0.2, 1);
+--fast: 120ms;
+--slow: 220ms;</code></pre>
+
+<p>
+  Two durations and one curve, reused everywhere, is what makes an interface
+  feel like one hand made it. Twelve different durations feel like a committee.
+</p>
+
+<h2>Dark mode</h2>
+
+<p>Here is the payoff. Define the colours as tokens:</p>
+
+<pre><code>:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --text: #14171c;
+  --border: #e5e7ec;
+}</code></pre>
+
+<p>Then redefine only those tokens for dark, and every rule in the project follows:</p>
+
+<pre><code>@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e1013;
+    --surface: #16191e;
+    --text: #e9ecf1;
+    --border: #262b34;
+  }
+}</code></pre>
+
+<p>
+  Not one component rule changes. That is why the tokens are worth the setup.
+</p>
+
+<h3>Letting the user choose</h3>
+
+<p>
+  <code>prefers-color-scheme</code> follows the operating system. To offer a
+  toggle as well, you need a second selector, because there are two ways to end
+  up in dark mode:
+</p>
+
+<pre><code>/* a) the OS says dark, and the user has not overridden it */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --bg: #0e1013; ... }
+}
+
+/* b) the user pressed our toggle */
+:root[data-theme='dark'] { --bg: #0e1013; ... }</code></pre>
+
+<pre><code>// The toggle itself is three lines
+const next = current === 'dark' ? 'light' : 'dark';
+document.documentElement.dataset.theme = next;
+localStorage.setItem('theme', next);</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The flash of the wrong theme</span>
+  <p>
+    If you apply the saved theme from a script at the bottom of the page, the
+    browser paints the light version first and then switches — a white flash on
+    every load. The fix is a tiny blocking script in the
+    <code>&lt;head&gt;</code> that sets the attribute before the first paint.
+    Both pages in this project do exactly that; it is the very first script tag
+    in <code>index.html</code>.
+  </p>
+</div>
+
+<h2>Responsive design</h2>
+
+<p>Write the flexible version first, then adjust:</p>
+
+<pre><code>/* Base: works everywhere */
+.layout { display: grid; grid-template-columns: 17rem 1fr; }
+
+/* Adjust below 60rem */
+@media (max-width: 60rem) {
+  .layout { grid-template-columns: 1fr; }
+}</code></pre>
+
+<p>
+  Pick breakpoints where <em>your</em> layout stops working, not at named device
+  sizes. Drag the window slowly and change it at the width where it starts to
+  look wrong — there is no iPhone-shaped constant worth memorising.
+</p>
+
+<p>
+  Use <code>rem</code> for breakpoints rather than <code>px</code>, so they
+  scale with a reader's chosen font size.
+</p>
+
+<h3>Media queries beyond width</h3>
+
+<pre><code>@media (prefers-color-scheme: dark) { }
+@media (prefers-reduced-motion: reduce) { }
+@media (hover: none) { }          /* touch device — no hover at all */
+@media print { }</code></pre>
+
+<p>
+  <code>hover: none</code> is genuinely useful. In this project the delete
+  button on a task only appears on hover — which on a touchscreen would mean
+  never. That media query shows it permanently on touch devices, asking the
+  device about its capabilities instead of guessing from screen width.
+</p>
+
+<h3>Doing without breakpoints</h3>
+
+<pre><code>width: min(40rem, 100%);        /* the smaller of the two */
+padding: max(1rem, 3vw);        /* the larger of the two */
+font-size: clamp(1rem, 2.5vw, 2rem);  /* min, preferred, max */</code></pre>
+
+<p>
+  <code>clamp()</code> scales a value smoothly between two limits with no media
+  query at all. Combined with the <code>auto-fill</code> grid from the layout
+  lesson, a surprising amount of responsive work disappears.
+</p>
+
+<h2>Transitions and animation</h2>
+
+<pre><code>.button {
+  background: var(--accent);
+  transition: background var(--fast) var(--ease);
+}
+
+.button:hover {
+  background: var(--accent-hover);
+}</code></pre>
+
+<p>
+  The <code>transition</code> goes on the <strong>resting</strong> state, not
+  the hover state. Put it on <code>:hover</code> and it animates on the way in
+  but snaps back on the way out.
+</p>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Animate transform and opacity, nothing else</span>
+  <p>
+    Those two are handled by the GPU without re-running layout. Animating
+    <code>width</code>, <code>height</code>, <code>top</code> or
+    <code>margin</code> forces the browser to recalculate the position of
+    everything on every frame, and that is where jank comes from. Need to slide
+    something? <code>transform: translateX()</code>, not <code>left</code>.
+  </p>
+</div>
+
+<pre><code>@keyframes slide-up {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  /* no `to` needed — it animates to the element's normal state */
+}
+
+.toast { animation: slide-up 220ms var(--ease); }</code></pre>
+
+<h3>Respect reduced motion</h3>
+
+<pre><code>@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}</code></pre>
+
+<p>
+  Some people get motion sick from interface animation and their OS lets them
+  say so. Note the <code>0.01ms</code> rather than <code>0</code> — it keeps any
+  JavaScript waiting on a <code>transitionend</code> event working, while
+  removing the movement.
+</p>
+
+<h2>Naming</h2>
+
+<p>
+  This project uses BEM — block, element, modifier — which is a convention, not
+  a tool:
+</p>
+
+<pre><code>.composer          /* block: a component */
+.composer__input   /* element: a part of it */
+.composer--wide    /* modifier: a variation */</code></pre>
+
+<p>
+  It looks verbose. The payoff is that you can read any class in the stylesheet
+  and know exactly where it applies without hunting through the HTML, and two
+  components can never collide.
+</p>
+
+<p>And keep state in one class on the parent:</p>
+
+<pre><code>.task.is-done .task__title { text-decoration: line-through; }</code></pre>
+
+<p>
+  JavaScript toggles the single word <code>is-done</code> and CSS decides what
+  that means. The alternative — JavaScript setting
+  <code>style.textDecoration</code> directly — scatters your design across two
+  languages and makes dark mode nearly impossible.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Tokenise a stylesheet</h3>
+  </div>
+  <p>Rewrite this using custom properties so the palette lives in one place:</p>
+<pre><code>.header { background: #4f46e5; color: white; padding: 16px; }
+.button { background: #4f46e5; color: white; padding: 8px 16px;
+          border-radius: 8px; }
+.link   { color: #4f46e5; }
+.badge  { background: #4f46e5; color: white; padding: 4px 8px;
+          border-radius: 8px; }</code></pre>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>:root {
+  --accent: #4f46e5;
+  --on-accent: #ffffff;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-4: 1rem;
+  --radius-sm: 8px;
+}
+
+.header { background: var(--accent); color: var(--on-accent);
+          padding: var(--space-4); }
+.button { background: var(--accent); color: var(--on-accent);
+          padding: var(--space-2) var(--space-4);
+          border-radius: var(--radius-sm); }
+.link   { color: var(--accent); }
+.badge  { background: var(--accent); color: var(--on-accent);
+          padding: var(--space-1) var(--space-2);
+          border-radius: var(--radius-sm); }</code></pre>
+    <p>Rebranding is now one line instead of four, and it cannot be done half-way.</p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Add dark mode to it</h3>
+  </div>
+  <p>
+    Extend your answer above with <code>--bg</code>, <code>--surface</code> and
+    <code>--text</code>, then make it respond to the OS dark mode setting. Test
+    by switching your system theme.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --text: #14171c;
+  --accent: #4f46e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1013;
+    --surface: #16191e;
+    --text: #e9ecf1;
+    --accent: #7c76ff;   /* lifted: indigo is too dark on black */
+  }
+}
+
+body { background: var(--bg); color: var(--text); }</code></pre>
+    <p>
+      Note the accent changes too. A colour picked for a white background is
+      usually too dark on a black one — dark mode is not an inversion, it is a
+      second palette.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Retheme the app</h3>
+  </div>
+  <p>
+    Open <code>public/theme.css</code> and change <code>--accent</code>,
+    <code>--accent-hover</code> and <code>--accent-soft</code> to a green.
+    Reload the task tracker. How many places changed, and how many lines did you
+    edit? Then find every rule in <code>styles.css</code> that would have needed
+    editing without variables.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      Three lines change the add button, the focus halo, the checked checkbox,
+      the progress bar, the active filter tab and the links — everywhere the
+      accent appears. Without tokens that is a find-and-replace across two files,
+      in two themes, and the one you miss is always the hover state nobody
+      screenshots.
+    </p>
+  </details>
+</div>

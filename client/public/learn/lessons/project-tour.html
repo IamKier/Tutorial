@@ -1,0 +1,356 @@
+<h1>Tour of the task tracker <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  Everything in this course, assembled. This lesson walks the whole codebase in
+  the order that makes it make sense, then follows one keystroke from your
+  fingers to the disk and back.
+</p>
+
+<h2>The files</h2>
+
+<pre><code>Tutorial/
+├── server.js          the backend: serves files, answers the API
+├── db.js              the data layer: the only file that touches storage
+├── data/tasks.json    your tasks (created on first save)
+├── package.json       "type": "module" — that is most of what it does
+└── public/            everything the browser downloads
+    ├── index.html     structure
+    ├── theme.css      design tokens, shared with the lessons
+    ├── styles.css     the app's own components
+    ├── app.js         behaviour
+    └── learn/         this site</code></pre>
+
+<p>
+  Roughly 600 lines of real code, no dependencies. Small enough to hold in your
+  head, which is the point.
+</p>
+
+<h2>Three layers, three responsibilities</h2>
+
+<pre><code>  BROWSER                      SERVER                    DISK
+  ┌────────────┐               ┌───────────┐             ┌──────────┐
+  │ index.html │               │ server.js │             │tasks.json│
+  │ styles.css │──── HTTP ────▶│           │──▶ db.js ──▶│          │
+  │ app.js     │◀───  JSON ────│           │◀────────────│          │
+  └────────────┘               └───────────┘             └──────────┘
+   what you see                 the rules                  the truth</code></pre>
+
+<p>
+  Each layer knows only about the one beneath it. <code>app.js</code> has no
+  idea data lives in a file; <code>server.js</code> has no idea it is JSON on
+  disk rather than Postgres. Those boundaries are what make the app changeable.
+</p>
+
+<h2>db.js — the data layer</h2>
+
+<p>Read this first, because everything depends on it. It exports four functions:</p>
+
+<pre><code>listTasks()              // Read
+createTask(title)        // Create
+updateTask(id, changes)  // Update
+deleteTask(id)           // Delete</code></pre>
+
+<p>
+  CRUD. Nearly every backend you ever write is these four operations repeated
+  for each kind of thing in your app.
+</p>
+
+<p>Three details worth stopping on:</p>
+
+<h3>The private helpers</h3>
+
+<pre><code>async function readAll() { ... }    // not exported
+async function writeAll(tasks) { }  // not exported</code></pre>
+
+<p>
+  Because they are not exported, nothing outside this file can read or write the
+  file directly. That is what makes the boundary real rather than a naming
+  convention.
+</p>
+
+<h3>The expected error</h3>
+
+<pre><code>catch (err) {
+  if (err.code === 'ENOENT') return [];   // no file yet — fine on first run
+  throw err;                              // anything else is a real bug
+}</code></pre>
+
+<p>
+  Catch what you expect and can handle; re-throw the rest. An empty
+  <code>catch {}</code> here would turn a permissions problem into "all your
+  tasks silently disappeared".
+</p>
+
+<h3>The allow-list</h3>
+
+<pre><code>if (typeof changes.title === 'string') task.title = changes.title;
+if (typeof changes.done === 'boolean') task.done = changes.done;</code></pre>
+
+<p>
+  Not <code>Object.assign(task, changes)</code> — that would let a caller
+  rewrite the <code>id</code> or invent fields. Mass assignment, prevented in
+  two lines.
+</p>
+
+<h2>server.js — the backend</h2>
+
+<p>It does the two jobs every backend does.</p>
+
+<h3>Job one: hand over the files</h3>
+
+<p>
+  <code>serveStatic</code> reads from <code>public/</code> and sends the bytes
+  with the right <code>Content-Type</code>. The security check is the part to
+  remember:
+</p>
+
+<pre><code>const filePath = path.join(PUBLIC_DIR, requestedPath);
+
+if (filePath !== PUBLIC_DIR &amp;&amp; !filePath.startsWith(PUBLIC_DIR + path.sep)) {
+  res.writeHead(403);
+  return res.end('403 Forbidden');
+}</code></pre>
+
+<p>
+  Without it, <code>GET /../../db.js</code> escapes the public folder and hands
+  out any file on the machine.
+</p>
+
+<h3>Job two: answer the API</h3>
+
+<pre><code>GET    /api/tasks       -&gt; db.listTasks()
+POST   /api/tasks       -&gt; db.createTask(title)
+PATCH  /api/tasks/:id   -&gt; db.updateTask(id, changes)
+DELETE /api/tasks/:id   -&gt; db.deleteTask(id)</code></pre>
+
+<p>
+  <code>handleApi</code> splits the path, checks the method, validates the
+  input, calls <code>db</code>, and sends a response with a precise status code.
+  That is all a router is.
+</p>
+
+<h3>The safety net</h3>
+
+<pre><code>catch (err) {
+  console.error('Unhandled error:', err);
+  if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
+  else res.end();
+}</code></pre>
+
+<p>
+  One catch around everything, so a bug in one handler returns a clean 500
+  instead of killing the process and disconnecting every other user.
+</p>
+
+<h2>public/ — the frontend</h2>
+
+<h3>index.html</h3>
+
+<p>
+  Structure only. Notice that the task list is an empty <code>&lt;ul&gt;</code> —
+  the tasks exist only in the live DOM that <code>app.js</code> builds. Notice
+  also the tiny script in the <code>&lt;head&gt;</code> that applies your saved
+  theme before the first paint, so dark mode does not flash white.
+</p>
+
+<h3>theme.css and styles.css</h3>
+
+<p>
+  <code>theme.css</code> holds the tokens — spacing, type, colour, motion — and
+  is shared with this lesson site, which is why both look like one product.
+  <code>styles.css</code> holds the app's own components and almost never uses a
+  raw value.
+</p>
+
+<p>
+  Dark mode is eleven lines redefining tokens. No component rule changes at all.
+</p>
+
+<h3>app.js</h3>
+
+<p>Seven sections, and the structure survives into every framework:</p>
+
+<ol>
+  <li><strong>State</strong> — <code>tasks</code>, <code>filter</code>. The single source of truth.</li>
+  <li><strong>Elements</strong> — looked up once.</li>
+  <li><strong>API</strong> — a <code>request()</code> wrapper that checks <code>response.ok</code>, because fetch will not.</li>
+  <li><strong>Formatting</strong> — <code>relativeTime()</code>.</li>
+  <li><strong>Render</strong> — rebuilds the list from state, every time.</li>
+  <li><strong>Events</strong> — one delegated listener on the <code>&lt;ul&gt;</code>.</li>
+  <li><strong>Startup</strong> — <code>load()</code>.</li>
+</ol>
+
+<p>And the one line that matters most:</p>
+
+<pre><code>title.textContent = task.title;   // never innerHTML for user input</code></pre>
+
+<h2>One keystroke, all the way down</h2>
+
+<p>You type "Buy milk" and press Enter.</p>
+
+<ol>
+  <li><strong>app.js</strong> — the form's <code>submit</code> listener fires. <code>preventDefault()</code> stops the page reloading.</li>
+  <li><strong>app.js</strong> — the submit button is disabled so a double-click cannot create two tasks. <code>api.create()</code> sends <code>POST /api/tasks</code> with <code>{"title":"Buy milk"}</code>.</li>
+  <li><strong>network</strong> — the request crosses to the server. Instant on localhost; possibly slow on a train.</li>
+  <li><strong>server.js</strong> — Node calls the request handler. The path starts with <code>/api/</code>, so <code>handleApi</code> runs.</li>
+  <li><strong>server.js</strong> — POST with no id means "create". <code>readJsonBody</code> collects the body chunk by chunk and parses it.</li>
+  <li><strong>server.js</strong> — validation: a string, non-empty after trimming, 200 characters or fewer. Otherwise a 400 and we stop here.</li>
+  <li><strong>db.js</strong> — <code>createTask</code> reads the file, appends a task with a fresh UUID and ISO timestamp, writes the whole file back.</li>
+  <li><strong>server.js</strong> — <code>sendJson(res, 201, task)</code>: status, headers, body, done.</li>
+  <li><strong>app.js</strong> — the <code>await</code> resumes. <code>response.ok</code> is true, so the JSON is parsed and returned.</li>
+  <li><strong>app.js</strong> — the server's task (with its real id) goes into <code>tasks</code>, and <code>render()</code> redraws the list.</li>
+  <li><strong>browser</strong> — layout and paint. "Buy milk" appears, animating in.</li>
+  <li><strong>app.js</strong> — <code>finally</code> re-enables the button and refocuses the input.</li>
+</ol>
+
+<p>
+  Twelve steps, four files, one round trip. Every feature you add follows this
+  same path — which is why it is worth being able to recite it.
+</p>
+
+<h2>Where each idea lives</h2>
+
+<table>
+  <thead>
+    <tr><th>Idea</th><th>Lesson</th><th>In the code</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Semantic markup</td><td>HTML</td><td><code>index.html</code> — header, main, ul</td></tr>
+    <tr><td>Forms and validation</td><td>HTML</td><td>the composer, <code>required</code>, <code>maxlength</code></td></tr>
+    <tr><td>Design tokens</td><td>CSS</td><td><code>theme.css</code> section 1</td></tr>
+    <tr><td>Flexbox</td><td>CSS</td><td><code>.composer</code>, <code>.task</code></td></tr>
+    <tr><td>Dark mode</td><td>CSS</td><td><code>theme.css</code> section 2</td></tr>
+    <tr><td>Array methods</td><td>JS</td><td><code>filter</code>, <code>map</code>, <code>find</code> in <code>app.js</code></td></tr>
+    <tr><td>Event delegation</td><td>JS</td><td>the single listener on <code>el.list</code></td></tr>
+    <tr><td>XSS prevention</td><td>JS</td><td><code>textContent</code> in <code>taskElement</code></td></tr>
+    <tr><td>fetch and response.ok</td><td>JS</td><td><code>request()</code></td></tr>
+    <tr><td>Promise.all</td><td>JS</td><td>the "Clear done" handler</td></tr>
+    <tr><td>Status codes</td><td>HTTP</td><td><code>sendJson</code> calls in <code>server.js</code></td></tr>
+    <tr><td>Streams</td><td>Node</td><td><code>readJsonBody</code></td></tr>
+    <tr><td>Path traversal</td><td>Node</td><td><code>serveStatic</code></td></tr>
+    <tr><td>Mass assignment</td><td>API</td><td><code>updateTask</code></td></tr>
+    <tr><td>CRUD</td><td>Data</td><td>the four exports of <code>db.js</code></td></tr>
+  </tbody>
+</table>
+
+<h2>What is deliberately missing</h2>
+
+<p>Knowing the gaps is part of understanding the code:</p>
+
+<ul>
+  <li><strong>No accounts.</strong> Everyone shares one list. Adding users touches every layer — it is the single most instructive next feature.</li>
+  <li><strong>No tests.</strong> The exercises are manual. A real project would test <code>db.js</code> first, since it is pure logic.</li>
+  <li><strong>No build step.</strong> The browser gets exactly the files on disk, which is why you can edit and reload with nothing in between.</li>
+  <li><strong>A file, not a database.</strong> Complete with the race condition from the data lesson.</li>
+  <li><strong>No rate limiting, no HTTPS, no pagination.</strong> Fine on localhost, not fine on the internet.</li>
+</ul>
+
+<h2>Exercises</h2>
+
+<p>These are bigger than the earlier ones. Each touches the whole stack.</p>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Edit a task's title</h3>
+  </div>
+  <p>
+    Double-clicking a title turns it into an input; Enter saves, Escape
+    cancels, blur saves. Then answer: how much of the backend did you have to
+    change?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      None. <code>PATCH /api/tasks/:id</code> already accepts a
+      <code>title</code>, and <code>updateTask</code> already allows it. This is
+      the payoff for designing the API around the resource rather than around
+      the screens that happen to exist today.
+    </p>
+    <p>
+      The frontend work: a <code>dblclick</code> listener (delegated, on the
+      list), swap the <code>&lt;span&gt;</code> for an <code>&lt;input&gt;</code>
+      with the current value, listen for <code>keydown</code> and
+      <code>blur</code>, call <code>api.update(id, { title })</code>, then
+      <code>render()</code>. Watch out for one thing: after
+      <code>render()</code> the input no longer exists, so do not touch it
+      afterwards.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Move filtering to the server</h3>
+  </div>
+  <p>
+    The filters are client-side today: the browser downloads every task and
+    hides some. Add <code>GET /api/tasks?status=done</code> and use it instead.
+    Then argue for which is better.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      With twelve tasks, client-side wins easily — switching filters is instant
+      because no request is involved. With fifty thousand, it is indefensible:
+      you download megabytes to show twenty rows.
+    </p>
+    <p>
+      The general rule is that filtering belongs where the data is. Client-side
+      filtering is a legitimate optimisation for small, already-loaded sets, and
+      a bug at scale. Note that the current code makes the switch cheap —
+      <code>visibleTasks()</code> is the only function that would change.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Add projects</h3>
+  </div>
+  <p>
+    Give every task a project. You need a <code>projects</code> collection with
+    its own CRUD, a <code>projectId</code> on tasks, an API that can list tasks
+    for one project, and a UI to switch between them. Decide what happens to a
+    project's tasks when the project is deleted.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      There is no single right answer, and choosing deliberately is the exercise.
+      The three options for deletion:
+    </p>
+    <ul>
+      <li><strong>Cascade</strong> — delete the tasks too. Simple, and irreversible.</li>
+      <li><strong>Orphan</strong> — set <code>projectId</code> to null and show them in an "Inbox". Safest, and the usual choice in real apps.</li>
+      <li><strong>Refuse</strong> — return <code>409 Conflict</code> unless the project is empty. Annoying, but nothing is ever lost by accident.</li>
+    </ul>
+    <p>
+      You will also hit a design decision the file-based store makes awkward:
+      two collections in two files with no transaction between them. Deleting a
+      project and its tasks is two writes, and a crash between them leaves the
+      data inconsistent. That is the moment to reach for SQLite.
+    </p>
+  </details>
+</div>
+
+<h2>Where to go next</h2>
+
+<p>In this order, because each one builds on the last:</p>
+
+<ol>
+  <li><strong>Express.</strong> Rewrite <code>server.js</code> with it. Half an hour, and every line will be familiar.</li>
+  <li><strong>SQLite</strong> via <code>node:sqlite</code>. Rewrite <code>db.js</code>, change nothing else. Then learn enough SQL to be dangerous — it has outlasted every framework and will outlast the current ones.</li>
+  <li><strong>Authentication.</strong> Sessions and cookies first, tokens later. This is where you learn to think about trust.</li>
+  <li><strong>A frontend framework</strong> — React or Svelte. Both automate the <code>render()</code> you wrote by hand, and you will understand what "state" means instead of memorising rules.</li>
+  <li><strong>TypeScript</strong>, once you have been burned by an undefined field at runtime. It will feel obvious by then.</li>
+  <li><strong>Deployment.</strong> Get it on the internet. Everything gets more real when someone else can open it.</li>
+</ol>
+
+<p>
+  One piece of advice worth more than that list: build things you actually want
+  to use. The project you finish because you needed the thing at the end teaches
+  more than five tutorials you abandon halfway.
+</p>

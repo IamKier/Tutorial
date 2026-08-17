@@ -1,0 +1,329 @@
+<h1>HTTP, requests, responses <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  Everything between a browser and a server is HTTP. Once you can picture a
+  request and a response, backend work stops being mysterious — it is just a
+  function that takes one and returns the other.
+</p>
+
+<h2>The whole model</h2>
+
+<pre><code>   BROWSER                                      SERVER
+   your machine                                 could be anywhere
+       |                                             |
+       |  GET /api/tasks                             |
+       | ------------------------------------------&gt; |
+       |                                             |  reads data
+       |  200 OK                                     |
+       |  [{"id":"a1","title":"Buy milk"}]           |
+       | &lt;------------------------------------------ |
+       |                                             |
+   draws the list</code></pre>
+
+<p>Three rules follow from that picture, and they explain most backend design:</p>
+
+<ul>
+  <li>
+    <strong>The browser can only ask.</strong> It cannot read your database or
+    your files. It sends a request and waits.
+  </li>
+  <li>
+    <strong>The server cannot trust the browser.</strong> The browser runs on
+    someone else's machine. Anyone can send any request they like, bypassing
+    your page entirely.
+  </li>
+  <li>
+    <strong>Each request stands alone.</strong> HTTP is stateless — the server
+    does not remember you between requests. Logins work by sending proof
+    (a cookie or a token) with every single one.
+  </li>
+</ul>
+
+<h2>A request</h2>
+
+<pre><code>POST /api/tasks HTTP/1.1
+Host: localhost:3000
+Content-Type: application/json
+Content-Length: 24
+
+{"title":"Buy milk"}</code></pre>
+
+<p>Four parts:</p>
+
+<ol>
+  <li><strong>Method</strong> — <code>POST</code>. What you want to do.</li>
+  <li><strong>Path</strong> — <code>/api/tasks</code>. What you want to do it to.</li>
+  <li><strong>Headers</strong> — metadata. One per line.</li>
+  <li><strong>Body</strong> — the data, after a blank line. GET requests have none.</li>
+</ol>
+
+<h2>A response</h2>
+
+<pre><code>HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Content-Length: 78
+
+{"id":"9f1c","title":"Buy milk","done":false,"createdAt":"2026-08-17T…"}</code></pre>
+
+<p>The same shape, with a status code where the method was.</p>
+
+<h2>Methods</h2>
+
+<table>
+  <thead>
+    <tr><th>Method</th><th>Means</th><th>Body?</th><th>Safe to repeat?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>GET</code></td><td>Read something</td><td>No</td><td>Yes</td></tr>
+    <tr><td><code>POST</code></td><td>Create something</td><td>Yes</td><td><strong>No</strong></td></tr>
+    <tr><td><code>PUT</code></td><td>Replace it entirely</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td><code>PATCH</code></td><td>Change part of it</td><td>Yes</td><td>Usually</td></tr>
+    <tr><td><code>DELETE</code></td><td>Remove it</td><td>No</td><td>Yes</td></tr>
+  </tbody>
+</table>
+
+<p>
+  That last column has a name — <strong>idempotent</strong> — and it is why
+  browsers warn you before re-sending a form. Requesting the same GET twice
+  changes nothing. POSTing twice creates two tasks. Deleting twice removes it and
+  then does nothing, which is fine.
+</p>
+
+<p>
+  Two properties worth keeping straight: <strong>safe</strong> means it changes
+  nothing at all (GET), <strong>idempotent</strong> means doing it repeatedly
+  has the same effect as doing it once. A GET that deletes something is a bug —
+  browsers and crawlers pre-fetch links freely.
+</p>
+
+<h2>Status codes</h2>
+
+<p>Learn the ranges, then the handful you actually send:</p>
+
+<table>
+  <thead>
+    <tr><th>Range</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>2xx</strong></td><td>Worked</td></tr>
+    <tr><td><strong>3xx</strong></td><td>Look somewhere else</td></tr>
+    <tr><td><strong>4xx</strong></td><td><strong>You</strong> asked wrongly</td></tr>
+    <tr><td><strong>5xx</strong></td><td><strong>The server</strong> broke</td></tr>
+  </tbody>
+</table>
+
+<p>
+  The 4xx/5xx split is the one to internalise. 4xx means the caller made a
+  mistake and repeating the request will not help. 5xx means the server made a
+  mistake and a retry might work. Getting it backwards sends people hunting for
+  bugs in the wrong codebase.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Code</th><th>Name</th><th>Send it when</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>200</code></td><td>OK</td><td>It worked and here is the result</td></tr>
+    <tr><td><code>201</code></td><td>Created</td><td>A POST created something</td></tr>
+    <tr><td><code>204</code></td><td>No Content</td><td>It worked, nothing to return (a DELETE)</td></tr>
+    <tr><td><code>301</code>/<code>302</code></td><td>Moved / Found</td><td>Permanent / temporary redirect</td></tr>
+    <tr><td><code>304</code></td><td>Not Modified</td><td>The cached copy is still good</td></tr>
+    <tr><td><code>400</code></td><td>Bad Request</td><td>Malformed or invalid input</td></tr>
+    <tr><td><code>401</code></td><td>Unauthorized</td><td>Not logged in (badly named — it means unauthenticated)</td></tr>
+    <tr><td><code>403</code></td><td>Forbidden</td><td>Logged in, but not allowed</td></tr>
+    <tr><td><code>404</code></td><td>Not Found</td><td>No such thing</td></tr>
+    <tr><td><code>405</code></td><td>Method Not Allowed</td><td>Right path, wrong verb</td></tr>
+    <tr><td><code>409</code></td><td>Conflict</td><td>Clashes with current state (duplicate email)</td></tr>
+    <tr><td><code>422</code></td><td>Unprocessable</td><td>Well-formed but semantically wrong</td></tr>
+    <tr><td><code>429</code></td><td>Too Many Requests</td><td>Rate limited</td></tr>
+    <tr><td><code>500</code></td><td>Internal Server Error</td><td>Your code threw</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout--note">
+  <span class="callout__title">In this project</span>
+  <p>
+    <code>server.js</code> sends <code>200</code> for a list, <code>201</code>
+    for a create, <code>204</code> for a delete, <code>400</code> for an empty
+    title, <code>404</code> for an unknown id, <code>405</code> for the wrong
+    method and <code>500</code> from the catch-all. Precise codes let another
+    developer understand your API without reading its documentation.
+  </p>
+</div>
+
+<h2>Headers</h2>
+
+<pre><code>Content-Type: application/json     what the body is
+Content-Length: 78                 how many bytes
+Accept: application/json           what the client would like back
+Authorization: Bearer eyJhbGc…     proof of who you are
+Cookie: session=abc123             data the server set earlier
+Cache-Control: max-age=3600        how long this may be cached
+Location: /api/tasks/9f1c          where the new thing lives (with 201)</code></pre>
+
+<p>
+  <code>Content-Type</code> is the one that bites beginners in both directions.
+  On a response it tells the browser how to treat what you sent — send CSS
+  labelled <code>text/plain</code> and the browser shows it as text instead of
+  applying it, with nothing in the console to explain why. On a request, leave
+  it off and most servers will not parse your JSON body.
+</p>
+
+<h2>URLs</h2>
+
+<pre><code>https://example.com:443/api/tasks?status=done&amp;sort=date#section
+└─┬─┘   └────┬────┘ └┬┘└───┬────┘ └────────┬──────────┘ └──┬──┘
+scheme    host     port   path        query string      fragment</code></pre>
+
+<ul>
+  <li><strong>Path</strong> identifies the resource.</li>
+  <li><strong>Query string</strong> modifies the request — filters, sorting, pagination. Starts with <code>?</code>, pairs joined by <code>&amp;</code>.</li>
+  <li><strong>Fragment</strong> is <em>never sent to the server</em>. It is for the browser only, which is exactly why this lesson site can use <code>#/css-layout</code> for routing without ever hitting the network.</li>
+</ul>
+
+<pre><code>// Node gives you a parser — never split URLs by hand
+const url = new URL(req.url, `http://${req.headers.host}`);
+url.pathname;                      // '/api/tasks'
+url.searchParams.get('status');    // 'done'</code></pre>
+
+<h2>Watching it happen</h2>
+
+<p>
+  Open DevTools (F12) → <strong>Network</strong> tab → tick the
+  <strong>Fetch/XHR</strong> filter, then use the app. Click any request:
+</p>
+
+<ul>
+  <li><strong>Headers</strong> — method, path, status, both sets of headers</li>
+  <li><strong>Payload</strong> — what you sent</li>
+  <li><strong>Response</strong> — what came back</li>
+  <li><strong>Timing</strong> — where the time went</li>
+</ul>
+
+<p>
+  This tab settles almost every "is it the frontend or the backend?" question in
+  about ten seconds. If the request looks right and the response looks wrong, it
+  is the backend. If the request itself is wrong, it is yours.
+</p>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Two more places to look</span>
+  <p>
+    The terminal running <code>node server.js</code> logs every request it
+    receives. If a request shows in the Network tab but not the terminal, it
+    never arrived — usually a typo in the URL. And in DevTools you can
+    right-click any request and choose "Copy as cURL" to replay it from a
+    terminal, without the browser involved at all.
+  </p>
+</div>
+
+<h2>Statelessness, and how logins work</h2>
+
+<p>
+  The server forgets you the instant it answers. So every authenticated request
+  has to carry its own proof. Two common shapes:
+</p>
+
+<pre><code>// Session cookie — the server stores the session, the browser
+// sends the id back automatically on every request
+Cookie: session=abc123
+
+// Token — the client stores it and attaches it deliberately
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs…</code></pre>
+
+<p>
+  Neither is a secret from the network unless the connection is encrypted, which
+  is what the <code>s</code> in <code>https</code> buys you. Over plain
+  <code>http</code>, anyone between you and the server can read every header and
+  every body. Never send credentials over plain HTTP.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Read the traffic</h3>
+  </div>
+  <p>
+    Open the app with the Network tab recording. Reload, add a task, tick it,
+    delete it. For each of the four requests write down: method, path, status
+    code, and whether there was a request body. Explain why the delete has no
+    response body.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+<pre><code>GET    /api/tasks         200   no body sent
+POST   /api/tasks         201   {"title":"…"}
+PATCH  /api/tasks/&lt;id&gt;    200   {"done":true}
+DELETE /api/tasks/&lt;id&gt;    204   no body sent</code></pre>
+    <p>
+      The delete returns <code>204 No Content</code> — the deletion succeeded and
+      there is deliberately nothing to send back. A 204 response
+      <em>must not</em> have a body, which is why <code>app.js</code> checks for
+      that status before calling <code>.json()</code>: parsing an empty body
+      would throw.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Pick the right code</h3>
+  </div>
+  <p>What status would you return for each?</p>
+  <ol>
+    <li>Signing up with an email that already exists</li>
+    <li>Requesting <code>/api/tasks/abc</code> where <code>abc</code> is not a real id</li>
+    <li>Sending <code>PUT</code> to a path that only supports <code>GET</code></li>
+    <li>Your database connection is down</li>
+    <li>A logged-in user tries to delete someone else's task</li>
+    <li>A task title of 5,000 characters when the limit is 200</li>
+  </ol>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><code>409 Conflict</code> — the request is fine, it clashes with existing state.</li>
+      <li><code>404 Not Found</code>.</li>
+      <li><code>405 Method Not Allowed</code>. Ideally with an <code>Allow: GET</code> header.</li>
+      <li><code>500</code> (or <code>503 Service Unavailable</code> if it is temporary). Never leak the internal error text to the client.</li>
+      <li><code>403 Forbidden</code> — authenticated but not permitted. <code>401</code> would wrongly imply they need to log in.</li>
+      <li><code>400 Bad Request</code>, or <code>422</code> if you distinguish "malformed" from "well-formed but invalid".</li>
+    </ol>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Bypass the browser</h3>
+  </div>
+  <p>
+    With the server running, send a request from PowerShell — no page, no
+    JavaScript. Then try to create a task with an empty title. What does this
+    prove about client-side validation?
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code># List
+Invoke-RestMethod -Uri http://localhost:3000/api/tasks
+
+# Create
+Invoke-RestMethod -Uri http://localhost:3000/api/tasks -Method Post `
+  -ContentType 'application/json' `
+  -Body '{"title":"From PowerShell"}'
+
+# Empty title — rejected with 400
+Invoke-RestMethod -Uri http://localhost:3000/api/tasks -Method Post `
+  -ContentType 'application/json' -Body '{"title":"   "}'</code></pre>
+    <p>
+      The first two work: your API is reachable by anything that speaks HTTP, not
+      just your page. The <code>required</code> attribute in your HTML was never
+      involved. That is why <code>server.js</code> re-validates — client
+      validation is a courtesy to honest users, and the server check is the one
+      that actually protects your data.
+    </p>
+  </details>
+</div>

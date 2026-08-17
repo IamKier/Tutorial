@@ -1,0 +1,377 @@
+<h1>Storing and modelling data <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  Data outlives code. You will rewrite the frontend three times and the database
+  will still be the one from year one — so the shape you choose now matters more
+  than almost anything else you decide.
+</p>
+
+<h2>JSON</h2>
+
+<p>
+  JSON is how data travels between browser and server, and how this project
+  stores it. It looks like JavaScript and is deliberately smaller:
+</p>
+
+<pre><code>{
+  "id": "9f1c-4d2e",
+  "title": "Buy milk",
+  "done": false,
+  "tags": ["errand", "urgent"],
+  "createdAt": "2026-08-17T08:30:00.000Z"
+}</code></pre>
+
+<p>Strings, numbers, booleans, null, arrays, objects. That is all of it.</p>
+
+<pre><code>JSON.stringify(task)           // object -> string
+JSON.stringify(task, null, 2)  // pretty, 2-space indent
+JSON.parse(text)               // string -> object</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">What JSON silently loses</span>
+  <p>
+    There is no date type — a <code>Date</code> becomes a string, and comes back
+    as a string. <code>undefined</code> values and functions are dropped
+    entirely. <code>NaN</code> and <code>Infinity</code> become
+    <code>null</code>. Round-tripping an object through JSON does
+    <strong>not</strong> always give you back what you put in.
+  </p>
+</div>
+
+<h2>Dates</h2>
+
+<pre><code>new Date().toISOString()   // '2026-08-17T08:30:00.000Z'</code></pre>
+
+<p>Store dates as ISO strings, in UTC, always. Three reasons:</p>
+
+<ul>
+  <li>They sort correctly as plain text — no parsing needed to order them.</li>
+  <li>The <code>Z</code> means UTC, so there is no ambiguity about whose midnight you meant.</li>
+  <li>Every language can parse them.</li>
+</ul>
+
+<p>
+  Convert to local time only when you show it. That is what
+  <code>relativeTime()</code> in <code>app.js</code> does — the stored value
+  never changes, the display adapts to the reader.
+</p>
+
+<h2>Designing a record</h2>
+
+<pre><code>{
+  "id": "9f1c-4d2e",
+  "title": "Buy milk",
+  "done": false,
+  "createdAt": "2026-08-17T08:30:00.000Z"
+}</code></pre>
+
+<p>Four principles behind that small object:</p>
+
+<h3>1. Every record needs an id</h3>
+
+<p>
+  Not the title — people rename things. A stable, meaningless id is what
+  everything else refers to. Use a UUID rather than a counter: two requests
+  arriving together can both read "the highest is 4" and both decide to be 5,
+  and sequential ids also tell the world how many records you have.
+</p>
+
+<h3>2. Store facts, not conclusions</h3>
+
+<pre><code>❌ { "done": true, "remainingCount": 4, "percentComplete": 60 }
+✅ { "done": true }</code></pre>
+
+<p>
+  Anything you can calculate should be calculated. Store it and you now have two
+  sources of truth that must be kept in step — and one day they will not be.
+  <code>render()</code> in <code>app.js</code> recomputes the counts and
+  percentage on every draw, and they are therefore never wrong.
+</p>
+
+<h3>3. Choose the type deliberately</h3>
+
+<pre><code>❌ "done": "false"     a string that looks like a boolean
+❌ "done": 0           a number standing in for one
+✅ "done": false</code></pre>
+
+<p>
+  <code>"false"</code> is a non-empty string, so it is <strong>truthy</strong>.
+  <code>if (task.done)</code> is then true for a task that is not done. That bug
+  is very hard to see and very easy to avoid.
+</p>
+
+<h3>4. Timestamps cost nothing and answer everything</h3>
+
+<p>
+  <code>createdAt</code> and <code>updatedAt</code> on every record. You will
+  want to sort by them, debug with them, and answer "when did this change?"
+  eventually. Adding them later means backfilling values you no longer know.
+</p>
+
+<h2>Relationships</h2>
+
+<p>Suppose tasks belong to projects. Two ways to express it:</p>
+
+<pre><code>// Nested — the project owns its tasks
+{
+  "id": "p1",
+  "name": "Website",
+  "tasks": [
+    { "id": "t1", "title": "Design" },
+    { "id": "t2", "title": "Build" }
+  ]
+}
+
+// Referenced — each task points at its project
+{ "id": "t1", "title": "Design", "projectId": "p1" }</code></pre>
+
+<table>
+  <thead>
+    <tr><th></th><th>Nested</th><th>Referenced</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Read one project with its tasks</td><td>Easy</td><td>Two lookups</td></tr>
+    <tr><td>List every task everywhere</td><td>Hard</td><td>Easy</td></tr>
+    <tr><td>Move a task between projects</td><td>Hard</td><td>Change one field</td></tr>
+    <tr><td>A task in two projects</td><td>Impossible</td><td>Straightforward</td></tr>
+  </tbody>
+</table>
+
+<p>
+  Nest when the child genuinely cannot exist without the parent and you always
+  fetch them together — a blog post's tags, an order's line items. Reference for
+  everything else. Referencing is what SQL databases do by default, and it is
+  the safer default here too.
+</p>
+
+<h2>Migrations</h2>
+
+<p>
+  The moment you add a field, every record saved before that change lacks it.
+  Add <code>priority</code> to a task and your old tasks have
+  <code>undefined</code> where the new ones have <code>"normal"</code>.
+</p>
+
+<p>Two ways to cope, and you need to pick one deliberately:</p>
+
+<pre><code>// A. Default on read — cheap, works forever
+const priority = task.priority ?? 'normal';
+
+// B. Backfill once — run a script that rewrites every record
+for (const task of tasks) {
+  task.priority ??= 'normal';
+}
+await writeAll(tasks);</code></pre>
+
+<p>
+  Option A is easier and leaves the mess in place, spread across every piece of
+  code that touches the field. Option B is a one-off effort that leaves the data
+  clean. Real systems do B, in a versioned, repeatable script — which is what
+  the word "migration" means when a framework uses it.
+</p>
+
+<h2>Why a file stops working</h2>
+
+<p>
+  <code>db.js</code> reads and rewrites the whole file for every change. That is
+  fine for a few hundred tasks and wrong for anything real:
+</p>
+
+<ul>
+  <li><strong>It rewrites everything to change one field.</strong> Fifty thousand records, one tick of a checkbox, the whole file written again.</li>
+  <li><strong>There is no way to search except reading it all into memory.</strong></li>
+  <li><strong>Concurrent writes lose data.</strong> See below.</li>
+  <li><strong>A crash mid-write can leave a truncated file</strong>, and then nothing parses.</li>
+</ul>
+
+<h3>The lost update</h3>
+
+<p>Open the app in two windows and add a task in each at the same moment:</p>
+
+<pre><code>Request A: reads the file  -> [task1]
+Request B: reads the file  -> [task1]           (A has not written yet)
+Request A: writes          -> [task1, taskA]
+Request B: writes          -> [task1, taskB]    ← taskA is gone</code></pre>
+
+<p>
+  B based its write on data that was already stale. Nothing errored; the task
+  simply vanished.
+</p>
+
+<p>
+  This is a <strong>race condition</strong>, and the specific case is called a
+  lost update. It is the reason databases have transactions and locking, and
+  seeing it happen in twenty lines of code you fully understand is worth more
+  than reading ten articles about it.
+</p>
+
+<h2>Moving to a database</h2>
+
+<p>
+  SQLite is the right next step, and modern Node has it built in — still no
+  installation:
+</p>
+
+<pre><code>import { DatabaseSync } from 'node:sqlite';
+
+const db = new DatabaseSync('tasks.db');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    done INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL
+  )
+`);
+
+// The ? is a placeholder — see the warning below
+db.prepare('INSERT INTO tasks (id, title, done, createdAt) VALUES (?, ?, ?, ?)')
+  .run(id, title, 0, new Date().toISOString());
+
+const rows = db.prepare('SELECT * FROM tasks ORDER BY createdAt DESC').all();</code></pre>
+
+<p>
+  Notice what you get: it writes only what changed, it can search without
+  loading everything, and it handles concurrent writes properly. All four
+  problems above, solved by the tool built for them.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never build SQL by joining strings</span>
+  <p>
+    <code>`SELECT * FROM tasks WHERE title = '${input}'`</code> lets anyone who
+    types <code>' OR 1=1 --</code> read your entire table. Use
+    <code>?</code> placeholders and pass the values separately — the database
+    then treats them as data and never as commands. This is SQL injection, it is
+    the oldest trick in the book, and it still works on new code every week.
+  </p>
+</div>
+
+<div class="callout callout--tip">
+  <span class="callout__title">This is why db.js is separate</span>
+  <p>
+    Nothing outside <code>db.js</code> knows that data lives in a JSON file.
+    <code>server.js</code> calls <code>db.createTask(title)</code> and has no
+    idea what happens inside. So switching to SQLite means rewriting that one
+    file — and <code>server.js</code>, <code>app.js</code> and the HTML never
+    notice. That payoff is the entire reason to draw the boundary early.
+  </p>
+</div>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Model a library</h3>
+  </div>
+  <p>
+    Design the JSON for a small library: books, members, and loans (a member
+    borrows a book from one date to another). Write one example record of each
+    and say why you nested or referenced.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>// books.json
+{ "id": "b1", "title": "Dune", "author": "Frank Herbert",
+  "isbn": "9780441013593", "copies": 3 }
+
+// members.json
+{ "id": "m1", "name": "Kier", "email": "k@example.com",
+  "joinedAt": "2026-01-15T00:00:00.000Z" }
+
+// loans.json
+{ "id": "l1", "bookId": "b1", "memberId": "m1",
+  "borrowedAt": "2026-08-01T00:00:00.000Z",
+  "dueAt":      "2026-08-15T00:00:00.000Z",
+  "returnedAt": null }</code></pre>
+    <p>
+      All referenced, because every one of these is looked up on its own: books
+      by title, members by email, loans by "what is overdue?". Nesting loans
+      inside members would make that last question require reading every member.
+    </p>
+    <p>
+      <code>returnedAt: null</code> rather than a <code>returned: false</code>
+      flag — the timestamp answers both "is it back?" and "when?", and the two
+      can never disagree.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Reproduce the lost update</h3>
+  </div>
+  <p>
+    Make it happen deliberately. In <code>db.js</code>, add a two-second delay
+    inside <code>createTask</code> between the read and the write. Then send two
+    creates a moment apart and inspect <code>data/tasks.json</code>.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>export async function createTask(title) {
+  const tasks = await readAll();
+
+  // Temporary: widen the window where the race can happen
+  await new Promise(resolve =&gt; setTimeout(resolve, 2000));
+
+  const task = { id: crypto.randomUUID(), title, done: false,
+                 createdAt: new Date().toISOString() };
+  tasks.push(task);
+  await writeAll(tasks);
+  return task;
+}</code></pre>
+<pre><code># Run both without waiting for the first to finish
+Start-Job { Invoke-RestMethod -Uri http://localhost:3000/api/tasks -Method Post `
+  -ContentType 'application/json' -Body '{"title":"First"}' }
+Invoke-RestMethod -Uri http://localhost:3000/api/tasks -Method Post `
+  -ContentType 'application/json' -Body '{"title":"Second"}'</code></pre>
+    <p>
+      Only one survives. Both requests read the same array, both appended to
+      their own copy, and the second write overwrote the first. Remove the delay
+      afterwards — the race is still there, the window is just narrow enough
+      that you rarely hit it. Narrow windows are what make these bugs so
+      unpleasant.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Add a field, handle the old data</h3>
+  </div>
+  <p>
+    Add <code>priority</code> (<code>'low' | 'normal' | 'high'</code>) to tasks,
+    end to end: store it, validate it in <code>server.js</code>, add a selector
+    to the composer, colour the card border. Then decide what happens to tasks
+    saved before your change — and implement that decision.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>The three-layer shape of the change:</p>
+<pre><code>// db.js — createTask
+priority: ['low', 'normal', 'high'].includes(priority) ? priority : 'normal',
+
+// db.js — updateTask (allow-list, same as the others)
+if (['low','normal','high'].includes(changes.priority)) {
+  task.priority = changes.priority;
+}
+
+// server.js — validate on the way in
+const priority = body.priority ?? 'normal';
+if (!['low','normal','high'].includes(priority)) {
+  return sendJson(res, 400, { error: 'Invalid priority' });
+}</code></pre>
+    <p>
+      For the old records, the cheap fix is defaulting on read
+      (<code>task.priority ?? 'normal'</code>). The clean fix is a one-off
+      backfill that rewrites the file with the field present, after which no
+      other code needs to know the field was ever missing. Real projects do the
+      second, in a script kept in version control — because "temporary" defaults
+      have a way of surviving for years.
+    </p>
+  </details>
+</div>

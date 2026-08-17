@@ -1,0 +1,387 @@
+<h1>JavaScript: the basics <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  JavaScript is the only language that runs in a browser, and with Node it runs
+  on servers too. That is why this project is JavaScript from top to bottom —
+  one language for both halves.
+</p>
+
+<h2>Where to run it</h2>
+
+<p>
+  Press <strong>F12</strong>, open the Console tab, and type. It evaluates
+  immediately, which makes it the fastest place to test anything in this lesson.
+  For longer code, use the <code>&lt;script&gt;</code> block in your scratch
+  file.
+</p>
+
+<pre><code>console.log('hello');           // prints to the console
+console.table([{a: 1}, {a: 2}]); // prints an array of objects as a table
+console.error('something broke');</code></pre>
+
+<h2>Variables</h2>
+
+<pre><code>const name = 'Kier';    // cannot be reassigned
+let count = 0;          // can be reassigned
+var old = 'avoid';      // legacy — different scoping rules, causes bugs</code></pre>
+
+<p>
+  Use <code>const</code> by default and switch to <code>let</code> only when you
+  genuinely reassign. It is not about being strict — a <code>const</code> tells
+  the next reader that this value never changes, which is one less thing to
+  track while reading.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">const is not "frozen"</span>
+  <p>
+    <code>const</code> stops the variable being pointed at something else. It
+    does not stop the thing it points at from changing. So
+    <code>const list = []</code> then <code>list.push(1)</code> is completely
+    fine — you are modifying the array, not reassigning the variable.
+  </p>
+</div>
+
+<h2>Types</h2>
+
+<pre><code>'text'  or  "text"  or  `text`     // string
+42      3.14                        // number — just one numeric type
+true    false                       // boolean
+null                                // deliberately empty
+undefined                           // never given a value
+[1, 2, 3]                           // array
+{ name: 'Kier' }                    // object</code></pre>
+
+<p>Backticks are template literals, and they are the ones you want:</p>
+
+<pre><code>const name = 'Kier';
+const greeting = `Hello, ${name}. You have ${3 + 4} tasks.`;
+
+// They can also span lines
+const html = `
+  &lt;li&gt;${name}&lt;/li&gt;
+`;</code></pre>
+
+<h2>Comparison, and the one rule to remember</h2>
+
+<pre><code>1 === 1      // true
+1 === '1'    // false — different types
+1 == '1'     // TRUE — == converts types first. Do not use it.
+
+'' == false      // true    ← nonsense like this
+null == undefined // true    ← is why == is avoided
+[] == false      // true</code></pre>
+
+<p>
+  <strong>Always use <code>===</code> and <code>!==</code>.</strong> The
+  double-equals version applies a table of conversion rules nobody has memorised
+  and everybody has been bitten by.
+</p>
+
+<h3>Truthiness</h3>
+
+<p>These eight values are falsy. Everything else is truthy:</p>
+
+<pre><code>false, 0, -0, 0n, '', null, undefined, NaN</code></pre>
+
+<pre><code>if (title) { }        // runs unless title is empty or missing
+if (tasks.length) { } // runs unless the array is empty</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The empty-array trap</span>
+  <p>
+    <code>[]</code> and <code>{}</code> are <strong>truthy</strong>, even when
+    empty. <code>if (tasks)</code> is true for an empty array — check
+    <code>tasks.length</code> instead. This catches everyone at least once.
+  </p>
+</div>
+
+<h2>Functions</h2>
+
+<pre><code>// Declaration
+function add(a, b) {
+  return a + b;
+}
+
+// Arrow function — what you will see most in modern code
+const add = (a, b) =&gt; a + b;
+
+// With a body
+const greet = (name) =&gt; {
+  const message = `Hello, ${name}`;
+  return message;
+};
+
+// Default parameter
+const greet = (name = 'friend') =&gt; `Hello, ${name}`;</code></pre>
+
+<p>
+  A one-line arrow function returns its expression automatically. Add braces and
+  you must write <code>return</code> yourself — forgetting that is a common
+  source of "why is this undefined".
+</p>
+
+<h2>Arrays</h2>
+
+<pre><code>const tasks = ['write', 'test', 'ship'];
+
+tasks.length        // 3
+tasks[0]            // 'write' — counting starts at 0
+tasks.push('deploy')      // add to the end
+tasks.includes('test')    // true</code></pre>
+
+<h3>The four methods that matter</h3>
+
+<p>
+  These four do most of the data work in any real application. All of them
+  return a <em>new</em> array and leave the original alone.
+</p>
+
+<pre><code>const tasks = [
+  { title: 'Write', done: true },
+  { title: 'Test', done: false },
+  { title: 'Ship', done: false },
+];
+
+// map — transform every item
+tasks.map(t =&gt; t.title);
+// ['Write', 'Test', 'Ship']
+
+// filter — keep the ones that match
+tasks.filter(t =&gt; !t.done);
+// [{Test}, {Ship}]
+
+// find — the first match, or undefined
+tasks.find(t =&gt; t.title === 'Test');
+// {title: 'Test', done: false}
+
+// reduce — boil the list down to one value
+tasks.reduce((count, t) =&gt; t.done ? count + 1 : count, 0);
+// 1</code></pre>
+
+<p>They chain, and that is where they get powerful:</p>
+
+<pre><code>const titles = tasks
+  .filter(t =&gt; !t.done)
+  .map(t =&gt; t.title.toUpperCase());
+// ['TEST', 'SHIP']</code></pre>
+
+<p>
+  Open <code>public/app.js</code> and you will find every one of these. Learning
+  them well is the single biggest jump in JavaScript fluency.
+</p>
+
+<pre><code>// Also useful
+tasks.some(t =&gt; t.done)     // is at least one done?
+tasks.every(t =&gt; t.done)    // are they all done?
+tasks.sort((a, b) =&gt; a.title.localeCompare(b.title))  // ⚠ sorts in place</code></pre>
+
+<h2>Objects</h2>
+
+<pre><code>const task = {
+  id: 'abc',
+  title: 'Write the lesson',
+  done: false,
+};
+
+task.title           // 'Write the lesson'
+task['title']        // same, useful when the key is in a variable
+task.done = true;    // set
+task.priority = 'high';   // add a new key
+delete task.priority;</code></pre>
+
+<h3>Optional chaining</h3>
+
+<pre><code>const city = user.address.city;    // 💥 if address is missing
+const city = user.address?.city;   // undefined, no crash
+
+const name = user.name ?? 'Anonymous';  // fallback only for null/undefined</code></pre>
+
+<p>
+  <code>??</code> is different from <code>||</code>, and the difference matters:
+  <code>||</code> falls back for <em>any</em> falsy value, so
+  <code>count || 10</code> gives you 10 when count is <code>0</code>.
+  <code>??</code> only falls back for <code>null</code> and
+  <code>undefined</code>, which is almost always what you actually meant.
+</p>
+
+<h3>Spread and destructuring</h3>
+
+<pre><code>// Copy an object, overriding one field
+const updated = { ...task, done: true };
+
+// Copy and join arrays
+const all = [...oldTasks, newTask];
+
+// Pull fields out into variables
+const { title, done } = task;
+const [first, second] = tasks;</code></pre>
+
+<p>
+  Spread makes a <strong>shallow</strong> copy — nested objects are still
+  shared. For a task with only strings and booleans that is fine; for anything
+  nested, know that changing a nested value changes both copies.
+</p>
+
+<h2>Control flow</h2>
+
+<pre><code>if (count === 0) {
+  console.log('none');
+} else if (count === 1) {
+  console.log('one');
+} else {
+  console.log('many');
+}
+
+const label = count === 1 ? 'task' : 'tasks';   // ternary
+
+// Loop over values
+for (const task of tasks) {
+  console.log(task.title);
+}
+
+// Loop over an object's entries
+for (const [key, value] of Object.entries(task)) {
+  console.log(key, value);
+}</code></pre>
+
+<p>
+  Use <code>for...of</code> for arrays. <code>for...in</code> loops over keys
+  including inherited ones and is a common source of surprises — avoid it.
+</p>
+
+<h2>Modules</h2>
+
+<pre><code>// db.js
+export async function listTasks() { ... }
+export const MAX = 200;
+
+// server.js
+import { listTasks, MAX } from './db.js';
+import * as db from './db.js';        // everything, namespaced</code></pre>
+
+<p>
+  Anything not exported is private to its file. That is what makes
+  <code>db.js</code> in this project a real boundary: <code>readAll</code> and
+  <code>writeAll</code> are not exported, so nothing outside can touch the file
+  directly.
+</p>
+
+<p>
+  In the browser, modules need <code>&lt;script type="module"&gt;</code> — which
+  is exactly what <code>index.html</code> uses.
+</p>
+
+<h2>Errors</h2>
+
+<pre><code>try {
+  const data = JSON.parse(text);
+} catch (err) {
+  console.error('Bad JSON:', err.message);
+} finally {
+  // runs either way — good for cleanup
+}
+
+throw new Error('Title is required');</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never catch and ignore</span>
+  <p>
+    An empty <code>catch {}</code> turns a crash you could debug into wrong
+    behaviour you cannot. Catch what you expect and can handle; let everything
+    else through. Look at <code>db.js</code>: it catches the "file does not
+    exist" error specifically and re-throws everything else.
+  </p>
+</div>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Work the array methods</h3>
+  </div>
+  <p>Given this array, write one expression for each question:</p>
+<pre><code>const tasks = [
+  { title: 'Write', done: true,  priority: 'high' },
+  { title: 'Test',  done: false, priority: 'high' },
+  { title: 'Ship',  done: false, priority: 'low'  },
+];</code></pre>
+  <ol>
+    <li>The titles of unfinished tasks</li>
+    <li>How many are done</li>
+    <li>The first high-priority unfinished task</li>
+    <li>True if every task has a title</li>
+    <li>All titles joined as one string, comma separated</li>
+  </ol>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>tasks.filter(t =&gt; !t.done).map(t =&gt; t.title);
+tasks.filter(t =&gt; t.done).length;
+tasks.find(t =&gt; !t.done &amp;&amp; t.priority === 'high');
+tasks.every(t =&gt; Boolean(t.title));
+tasks.map(t =&gt; t.title).join(', ');</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Predict the output</h3>
+  </div>
+  <p>Work these out on paper first, then check in the console:</p>
+<pre><code>console.log(1 + '1');
+console.log('3' * 2);
+console.log([] + {});
+console.log(0 === -0);
+console.log(0.1 + 0.2 === 0.3);
+console.log([1, 2, 3] === [1, 2, 3]);</code></pre>
+  <details>
+    <summary>Show answer</summary>
+<pre><code>'11'      // + with a string concatenates
+6         // * has no string meaning, so '3' converts to a number
+'[object Object]'   // both convert to strings. JavaScript being JavaScript.
+true
+false     // 0.1 + 0.2 is 0.30000000000000004
+false     // two different arrays; === compares identity, not contents</code></pre>
+    <p>
+      The last two are the ones that matter. Floating point is why you never
+      store money as a decimal — store cents as whole numbers. And
+      <code>===</code> on objects and arrays asks "is this the same object?",
+      not "do these look alike?".
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Write a summariser</h3>
+  </div>
+  <p>
+    Write <code>summarise(tasks)</code> that returns
+    <code>{ total, done, remaining, percent }</code>, where percent is a whole
+    number and an empty array gives 0 rather than <code>NaN</code>.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>function summarise(tasks) {
+  const total = tasks.length;
+  const done = tasks.filter(t =&gt; t.done).length;
+
+  return {
+    total,
+    done,
+    remaining: total - done,
+    // Guard the divide: 0/0 is NaN, which then spreads through
+    // everything it touches and shows up as "NaN%" on screen.
+    percent: total === 0 ? 0 : Math.round((done / total) * 100),
+  };
+}</code></pre>
+    <p>
+      This is essentially what <code>render()</code> in <code>app.js</code>
+      computes for the progress bar — including that divide-by-zero guard, which
+      is why the bar is hidden entirely when there are no tasks.
+    </p>
+  </details>
+</div>

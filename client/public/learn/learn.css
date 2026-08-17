@@ -1,0 +1,1154 @@
+/* ==========================================================================
+   learn.css — THE LESSON SITE
+
+   Tokens, reset and utilities come from /theme.css, which loads first.
+   This file only describes this page.
+
+   Contents:
+     1.  Shell layout
+     2.  Reading progress
+     3.  Sidebar head and search
+     4.  Navigation
+     5.  Sidebar foot
+     6.  Mobile drawer
+     7.  Prose
+     8.  Code blocks
+     9.  Callouts
+     10. Exercises
+     11. On this page
+     12. Lesson navigation
+     13. Shortcuts dialog
+     14. Small screens
+   ========================================================================== */
+
+/* --- 1. SHELL LAYOUT -------------------------------------------------------
+   Three columns on a wide screen: lessons, content, page outline.
+
+   `1fr` means "whatever is left". Writing the middle column that way rather
+   than as a percentage is what stops the layout breaking at odd widths — the
+   two rails take their fixed space and the content simply gets the rest.
+   -------------------------------------------------------------------------- */
+.layout {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+/* The outline rail only appears when there is genuinely room for it. Below
+   this width it would squeeze the lesson text past comfortable reading. */
+@media (min-width: 80rem) {
+  .layout {
+    grid-template-columns: 17rem minmax(0, 1fr) 14rem;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+
+  /* Off-screen until focused. Tab into the page and it slides into view. */
+  transform: translateY(-150%);
+  transition: transform var(--fast) var(--ease);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* The mobile header. Hidden on desktop, where the sidebar is always there. */
+.topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+
+  /* A translucent bar with a blur behind it, so content scrolling underneath
+     stays faintly visible. color-mix builds the transparent colour out of an
+     existing token instead of hard-coding a new one. */
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.topbar__title {
+  font-weight: 580;
+  /* One line, with an ellipsis if the lesson title is long. All three
+     properties are required — this is the standard incantation. */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* --- 2. READING PROGRESS ---------------------------------------------------
+   A hairline across the top of the window showing how far through the lesson
+   you have scrolled. Cheap to draw and genuinely useful on a long page.
+   -------------------------------------------------------------------------- */
+.read-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  height: 3px;
+  width: 0%;
+  background: var(--accent);
+  /* No transition on width: it tracks the scroll directly, and easing it
+     would make it lag behind your thumb. */
+}
+
+/* --- 3. SIDEBAR HEAD AND SEARCH -------------------------------------------- */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+
+  /* `sticky` plus a viewport height keeps the sidebar in place while the
+     lesson scrolls, and lets the sidebar scroll on its own when the lesson
+     list grows taller than the screen. */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+
+  /* Stops a scroll gesture that reaches the end of the sidebar from carrying
+     on and scrolling the page behind it. */
+  overscroll-behavior: contain;
+}
+
+.sidebar__head {
+  padding: var(--space-5) var(--space-4) var(--space-3);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.brand__text {
+  min-width: 0;
+}
+
+.brand__name {
+  display: block;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.brand__sub {
+  display: block;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+/* ---- Search ------------------------------------------------------------------ */
+.search {
+  position: relative;
+  margin: 0 var(--space-4) var(--space-4);
+}
+
+.search__icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  width: 16px;
+  height: 16px;
+  /* -50% of the icon's OWN height, which is what actually centres it. */
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none; /* clicks pass through to the input */
+}
+
+.search__input {
+  width: 100%;
+  /* Left padding clears the icon, right padding clears the shortcut hint. */
+  padding: var(--space-2) var(--space-6) var(--space-2) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.search__input::placeholder {
+  color: var(--text-faint);
+}
+
+.search__input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+/* Hide the browser's own clear button on type="search" — it varies by
+   browser and clashes with the shortcut hint. */
+.search__input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search__hint {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  pointer-events: none;
+}
+
+.search__input:focus + .search__hint {
+  opacity: 0;
+}
+
+/* ---- Overall progress -------------------------------------------------------- */
+.sidebar__progress {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.sidebar__progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.reset-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  color: var(--text);
+}
+
+.progress-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  transition: width var(--slow) var(--ease);
+}
+
+/* --- 4. NAVIGATION --------------------------------------------------------- */
+.nav {
+  flex: 1; /* take the space between the header and the footer */
+  padding: 0 var(--space-3);
+}
+
+.nav__topic {
+  margin-bottom: var(--space-4);
+}
+
+.nav__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2);
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  font-weight: 620;
+  /* Capitals look cramped at default tracking; widening them is the standard
+     treatment for a small label. */
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.nav__number {
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+}
+
+.nav__heading-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* "2/3" beside a topic — how far through that section you are. */
+.nav__topic-count {
+  color: var(--text-faint);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.nav__topic.is-complete .nav__number {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.nav__link:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.nav__link.is-current {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 560;
+}
+
+/* The circle that fills in when a lesson is marked done. */
+.nav__dot {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  color: transparent;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.nav__link.is-done .nav__dot {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--surface);
+}
+
+.nav__link.is-done .nav__text {
+  color: var(--text-faint);
+}
+
+.nav__dot .icon {
+  width: 10px;
+  height: 10px;
+  stroke-width: 3;
+}
+
+.nav__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Hidden by the search filter. A class rather than the `hidden` attribute so
+   the two mechanisms cannot fight over the same element. */
+.nav__topic.is-filtered,
+.nav__list li.is-filtered {
+  display: none;
+}
+
+.nav__empty {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+/* --- 5. SIDEBAR FOOT ------------------------------------------------------- */
+.sidebar__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+
+  /* Pinned to the bottom of the sidebar while the nav above it scrolls. */
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+}
+
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.sidebar__link:hover {
+  color: var(--text);
+}
+
+.sidebar__link .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.icon-button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* Sun in light mode, moon in dark — chosen by CSS, no JavaScript. */
+.icon--moon {
+  display: none;
+}
+:root[data-theme='dark'] .icon--sun {
+  display: none;
+}
+:root[data-theme='dark'] .icon--moon {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .icon--sun {
+    display: none;
+  }
+  :root:not([data-theme='light']) .icon--moon {
+    display: block;
+  }
+}
+
+/* --- 6. MOBILE DRAWER ------------------------------------------------------ */
+.scrim {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  .topbar {
+    display: flex;
+  }
+
+  .layout {
+    /* One column: the sidebar is no longer part of the flow. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: 17rem;
+    max-width: 85vw;
+    box-shadow: var(--shadow-lg);
+
+    /* Parked just off the left edge until opened. Animating `transform`
+       rather than `left` keeps the movement on the GPU, which is the
+       difference between a smooth slide and a stuttering one. */
+    transform: translateX(-100%);
+    transition: transform var(--slow) var(--ease);
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0; /* shorthand for top/right/bottom/left: 0 */
+    z-index: 35;
+    background: rgb(0 0 0 / 0.4);
+    animation: fade-in var(--fast) var(--ease);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* --- 7. PROSE --------------------------------------------------------------
+   Everything here is scoped under .prose so these generous defaults apply to
+   lesson content only and cannot leak into the sidebar.
+   -------------------------------------------------------------------------- */
+.content {
+  min-width: 0; /* lets the column shrink instead of overflowing the grid */
+  padding: var(--space-6) var(--space-6) var(--space-7);
+}
+
+.content:focus {
+  outline: none; /* focused programmatically, not by the user */
+}
+
+.eyebrow {
+  max-width: 46rem;
+  margin: 0 auto var(--space-2);
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.prose {
+  /* Around 70 characters per line. Longer and the eye loses its place coming
+     back for the next line — the single easiest thing you can do for
+     readability. */
+  max-width: 46rem;
+  margin: 0 auto;
+  /* A short fade on lesson change, so the swap reads as a transition rather
+     than a flicker. */
+  animation: lesson-in var(--slow) var(--ease);
+}
+
+@keyframes lesson-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
+.prose > * + * {
+  /* The "lobotomised owl": space between siblings, with no stray margin above
+     the first element or below the last. Spacing between things rather than
+     around them is far easier to keep consistent. */
+  margin-top: var(--space-4);
+}
+
+.prose h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.prose h2 {
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xl);
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  /* Stops a heading landing flush against the top of the window when you
+     jump to it from the outline. */
+  scroll-margin-top: var(--space-5);
+}
+
+.prose h3 {
+  margin-top: var(--space-5);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  scroll-margin-top: var(--space-5);
+}
+
+.prose p,
+.prose li {
+  color: var(--text);
+}
+
+.prose .lead {
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+  line-height: 1.5;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: var(--space-5);
+}
+
+.prose li + li {
+  margin-top: var(--space-2);
+}
+
+.prose li::marker {
+  color: var(--text-faint);
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose strong {
+  font-weight: 620;
+}
+
+/* Inline code — deliberately subtle, so a sentence containing three of them
+   is still readable. */
+.prose :not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 0.875em; /* em, so it tracks the surrounding text size */
+  overflow-wrap: anywhere;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse; /* one shared border instead of double lines */
+  font-size: var(--text-sm);
+}
+
+.prose th,
+.prose td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose th {
+  color: var(--text-muted);
+  font-weight: 580;
+  white-space: nowrap;
+}
+
+.prose tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+/* Tables are the usual culprit for horizontal page scroll. Wrapping one in a
+   scroll container keeps the overflow inside the table instead of pushing the
+   whole page sideways. learn.js adds this wrapper automatically. */
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.table-scroll table {
+  font-size: var(--text-sm);
+}
+
+.table-scroll tr:last-child td {
+  border-bottom: none;
+}
+
+.table-scroll th,
+.table-scroll td {
+  padding: var(--space-2) var(--space-4);
+}
+
+.prose hr {
+  margin: var(--space-6) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* A small tag in lesson headings: "Basics" / "Intermediate". */
+.tag {
+  display: inline-block;
+  /* `middle` keeps it optically aligned with a large heading rather than
+     sitting on the baseline. */
+  vertical-align: middle;
+  margin-left: var(--space-2);
+  padding: 0.15rem var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 560;
+  letter-spacing: 0;
+}
+
+.tag--intermediate {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+kbd {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+}
+
+/* --- 8. CODE BLOCKS -------------------------------------------------------- */
+.prose pre {
+  position: relative;
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+
+  /* Long lines scroll inside the block rather than stretching the page. */
+  overflow-x: auto;
+
+  /* Room for the copy button so it never sits on top of the first line. */
+  padding-top: var(--space-5);
+}
+
+.prose pre code {
+  font: inherit;
+}
+
+/* The token colours the highlighter in learn.js applies. */
+.tok-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.tok-string {
+  color: var(--code-string);
+}
+.tok-keyword {
+  color: var(--code-keyword);
+}
+.tok-number {
+  color: var(--code-number);
+}
+
+.code-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+
+.copy-button {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--code-text);
+  font-size: var(--text-xs);
+  cursor: pointer;
+
+  /* Appears on hover so it does not sit in the way while reading. */
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.prose pre:hover .copy-button,
+.copy-button:focus-visible {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.copy-button.is-copied {
+  border-color: transparent;
+  background: var(--success);
+  color: #fff;
+}
+
+/* --- 9. CALLOUTS -----------------------------------------------------------
+   Three flavours, one shape. The coloured left edge is what makes them
+   scannable when you are skimming for the warning you half remember.
+   -------------------------------------------------------------------------- */
+.callout {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-faint);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.callout > * + * {
+  margin-top: var(--space-2);
+}
+
+.callout p {
+  margin: 0;
+}
+
+.callout__title {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: 620;
+}
+
+.callout--note {
+  border-left-color: var(--accent);
+}
+.callout--note .callout__title {
+  color: var(--accent);
+}
+
+.callout--warn {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+.callout--warn .callout__title {
+  color: var(--danger);
+}
+
+.callout--tip {
+  border-left-color: var(--success);
+  background: var(--success-soft);
+}
+.callout--tip .callout__title {
+  color: var(--success);
+}
+
+/* --- 10. EXERCISES --------------------------------------------------------- */
+.exercise {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.exercise > * + * {
+  margin-top: var(--space-3);
+}
+
+.exercise__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exercise__number {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 660;
+}
+
+.exercise__title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.exercise p,
+.exercise li {
+  font-size: var(--text-sm);
+}
+
+.exercise p {
+  margin: 0;
+}
+
+/*
+  <details> is a built-in collapsible section — no JavaScript required. The
+  browser handles the open/close state, the keyboard support and the screen
+  reader announcement. Reach for it before writing an accordion.
+*/
+.exercise details {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.exercise summary {
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 560;
+  cursor: pointer;
+  /* Hides the default triangle so we can draw our own marker. */
+  list-style: none;
+}
+
+.exercise summary::-webkit-details-marker {
+  display: none;
+}
+
+.exercise summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  color: var(--text-faint);
+}
+
+.exercise details[open] summary::before {
+  content: '▾';
+}
+
+.exercise details > *:not(summary) {
+  margin-top: var(--space-3);
+}
+
+/* --- 11. ON THIS PAGE ------------------------------------------------------ */
+.toc {
+  position: sticky;
+  top: 0;
+  align-self: start; /* stops the grid stretching it to full height */
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.toc__title {
+  margin: 0 0 var(--space-3);
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* A hairline the links sit against, so the active marker has something to
+     register as movement along. */
+  border-left: 1px solid var(--border);
+}
+
+.toc__link {
+  display: block;
+  padding: var(--space-1) var(--space-3);
+  margin-left: -1px; /* overlap the list's border */
+  border-left: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+
+.toc__link:hover {
+  color: var(--text);
+}
+
+.toc__link.is-active {
+  border-left-color: var(--accent);
+  color: var(--accent);
+}
+
+/* --- 12. LESSON NAVIGATION ------------------------------------------------- */
+.done-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 560;
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.done-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.done-toggle.is-done {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.lesson-nav {
+  display: flex;
+  gap: var(--space-3);
+  max-width: 46rem;
+  margin: var(--space-5) auto 0;
+}
+
+.lesson-nav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.lesson-nav__link:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.lesson-nav__link .icon {
+  color: var(--text-faint);
+}
+
+.lesson-nav__text {
+  min-width: 0;
+}
+
+/* `margin-left: auto` pushes the Next card to the right edge even when there
+   is no Previous card beside it — neater than an empty spacer element. */
+.lesson-nav__link--next {
+  margin-left: auto;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.lesson-nav__label {
+  display: block;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.lesson-nav__title {
+  display: block;
+  font-weight: 560;
+}
+
+/* --- 13. SHORTCUTS DIALOG -------------------------------------------------- */
+.shortcuts {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 0.45);
+  animation: fade-in var(--fast) var(--ease);
+}
+
+.shortcuts__panel {
+  width: 100%;
+  max-width: 22rem;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.shortcuts__title {
+  margin: 0 0 var(--space-4);
+  font-weight: 620;
+}
+
+.shortcuts__list {
+  display: grid;
+  /* `auto` sizes the key column to its content; the description takes the
+     rest. Two columns without touching a single width. */
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.shortcuts__list dt {
+  white-space: nowrap;
+}
+
+.shortcuts__list dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* --- 14. SMALL SCREENS ----------------------------------------------------- */
+@media (max-width: 40rem) {
+  .content {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+
+  .prose h1 {
+    font-size: 1.5rem;
+  }
+
+  .lesson-nav {
+    flex-direction: column;
+  }
+
+  .lesson-nav__link--next {
+    margin-left: 0;
+  }
+
+  /* On a phone the copy button has no hover to appear on. */
+  .copy-button {
+    opacity: 1;
+  }
+}

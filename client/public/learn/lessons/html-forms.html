@@ -1,0 +1,297 @@
+<h1>Forms and input <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  Forms are how a page collects anything from a person. They are also the part
+  of HTML with the most built-in behaviour — and the most often thrown away and
+  rebuilt badly with JavaScript.
+</p>
+
+<h2>The smallest useful form</h2>
+
+<pre><code>&lt;form&gt;
+  &lt;label for="name"&gt;Your name&lt;/label&gt;
+  &lt;input type="text" id="name" name="name" /&gt;
+  &lt;button type="submit"&gt;Send&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+<p>Three things to notice, because each is doing real work:</p>
+
+<ul>
+  <li>
+    <strong>The <code>&lt;form&gt;</code> wrapper.</strong> It is what makes
+    Enter submit from inside a field. Without it you have a text box and a
+    button that happen to sit near each other, and you have to wire up the Enter
+    key yourself.
+  </li>
+  <li>
+    <strong><code>for</code> matches <code>id</code>.</strong> That pairing links
+    the label to the field, so clicking the label focuses the input, and a screen
+    reader announces "Your name, edit text" instead of just "edit text".
+  </li>
+  <li>
+    <strong><code>name</code>, not <code>id</code>, is what gets submitted.</strong>
+    <code>id</code> is for CSS and JavaScript; <code>name</code> is the key the
+    value is sent under.
+  </li>
+</ul>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Every input needs a label</span>
+  <p>
+    A placeholder is not a label. It disappears the moment someone types, it is
+    usually too low-contrast to read, and many screen readers ignore it. If you
+    genuinely cannot show a label, use a visually hidden one or
+    <code>aria-label</code> — but show it if you can.
+  </p>
+</div>
+
+<h2>Input types</h2>
+
+<p>
+  <code>type</code> changes the keyboard on phones, the validation the browser
+  applies, and sometimes the whole control:
+</p>
+
+<pre><code>&lt;input type="text" /&gt;         &lt;!-- anything --&gt;
+&lt;input type="email" /&gt;        &lt;!-- checks for an @, email keyboard --&gt;
+&lt;input type="password" /&gt;     &lt;!-- masked --&gt;
+&lt;input type="number" /&gt;       &lt;!-- numeric keyboard, spinner --&gt;
+&lt;input type="tel" /&gt;          &lt;!-- phone keypad --&gt;
+&lt;input type="url" /&gt;
+&lt;input type="date" /&gt;         &lt;!-- a real date picker, free --&gt;
+&lt;input type="checkbox" /&gt;
+&lt;input type="radio" /&gt;
+&lt;input type="file" /&gt;
+&lt;input type="search" /&gt;
+&lt;input type="color" /&gt;</code></pre>
+
+<p>
+  Picking the right type is the cheapest usability win in web development. A
+  <code>type="email"</code> field gives a phone user the keyboard with
+  <code>@</code> on it — no code, no library.
+</p>
+
+<h3>Beyond a single line</h3>
+
+<pre><code>&lt;textarea id="notes" name="notes" rows="4"&gt;&lt;/textarea&gt;
+
+&lt;select id="priority" name="priority"&gt;
+  &lt;option value="low"&gt;Low&lt;/option&gt;
+  &lt;option value="normal" selected&gt;Normal&lt;/option&gt;
+  &lt;option value="high"&gt;High&lt;/option&gt;
+&lt;/select&gt;</code></pre>
+
+<p>
+  <code>&lt;textarea&gt;</code> has no <code>value</code> attribute — its
+  content sits between the tags. And be careful: any whitespace you put there
+  for tidiness becomes part of the value, which is why the tags above are
+  jammed together.
+</p>
+
+<h3>Checkboxes and radios</h3>
+
+<pre><code>&lt;!-- Checkboxes: independent. Each needs its own name. --&gt;
+&lt;input type="checkbox" id="urgent" name="urgent" /&gt;
+&lt;label for="urgent"&gt;Urgent&lt;/label&gt;
+
+&lt;!-- Radios: pick one. The SHARED name is what groups them. --&gt;
+&lt;input type="radio" id="p-low" name="priority" value="low" /&gt;
+&lt;label for="p-low"&gt;Low&lt;/label&gt;
+
+&lt;input type="radio" id="p-high" name="priority" value="high" /&gt;
+&lt;label for="p-high"&gt;High&lt;/label&gt;</code></pre>
+
+<p>
+  Radios with different <code>name</code> attributes do not group, so all of
+  them can be selected at once. That is the classic radio button bug, and it is
+  always this.
+</p>
+
+<h2>Validation the browser does for you</h2>
+
+<pre><code>&lt;input type="text" required /&gt;
+&lt;input type="text" minlength="3" maxlength="200" /&gt;
+&lt;input type="number" min="1" max="10" step="1" /&gt;
+&lt;input type="text" pattern="[A-Z]{3}-\d{4}" /&gt;
+&lt;input type="email" required /&gt;</code></pre>
+
+<p>
+  Add these and the browser refuses to submit an invalid form, showing its own
+  message, in the user's language, with no JavaScript at all. Free, and better
+  than most hand-rolled versions.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Client-side validation is a courtesy, not a defence</span>
+  <p>
+    Everything above runs in the browser, on the user's machine, and can be
+    switched off in DevTools in two seconds. Anyone can send a request straight
+    to your server without ever loading your page. So validate on the client to
+    give people fast feedback, and validate <em>again</em> on the server because
+    that is the check that actually protects your data. Look at
+    <code>server.js</code>: it re-checks the title even though
+    <code>index.html</code> already marked the input <code>required</code>.
+  </p>
+</div>
+
+<h2>Other attributes worth knowing</h2>
+
+<table>
+  <thead>
+    <tr><th>Attribute</th><th>What it does</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>placeholder</code></td><td>Grey hint text. Not a label.</td></tr>
+    <tr><td><code>autocomplete</code></td><td><code>"off"</code>, or a hint like <code>"email"</code> so browsers can autofill correctly.</td></tr>
+    <tr><td><code>autofocus</code></td><td>Focus this field on load. Use at most once, and not on mobile — it pops the keyboard up unasked.</td></tr>
+    <tr><td><code>disabled</code></td><td>Unusable and <strong>not submitted</strong>.</td></tr>
+    <tr><td><code>readonly</code></td><td>Unchangeable but still submitted.</td></tr>
+    <tr><td><code>value</code></td><td>The starting value.</td></tr>
+  </tbody>
+</table>
+
+<h2>What submitting actually does</h2>
+
+<p>
+  This is the part worth understanding properly, because it explains a line you
+  will write in every JavaScript form handler.
+</p>
+
+<p>
+  By default, submitting a form makes the browser <strong>navigate</strong> — it
+  builds an HTTP request from the fields and loads a whole new page with the
+  response. Two attributes control it:
+</p>
+
+<pre><code>&lt;form action="/api/tasks" method="post"&gt;</code></pre>
+
+<ul>
+  <li><code>method="get"</code> — values go in the URL as <code>?title=Buy+milk</code>. For searches and filters: the URL is shareable and bookmarkable.</li>
+  <li><code>method="post"</code> — values go in the request body. For anything that changes data. Not visible in the URL, not left in browser history.</li>
+</ul>
+
+<p>
+  That full-page reload is how the web worked for its first decade, and it still
+  works fine. But in an app like the task tracker we want the page to stay put,
+  so we cancel the default and send the request ourselves:
+</p>
+
+<pre><code>form.addEventListener('submit', (event) =&gt; {
+  event.preventDefault();   // stop the browser navigating
+  // ...send it with fetch instead
+});</code></pre>
+
+<p>
+  Forget <code>preventDefault()</code> and the page flashes, reloads and clears
+  the input every time. It is one of the most common first-week bugs, and now
+  you know exactly what it is.
+</p>
+
+<h2>Grouping related fields</h2>
+
+<pre><code>&lt;fieldset&gt;
+  &lt;legend&gt;Delivery address&lt;/legend&gt;
+
+  &lt;label for="street"&gt;Street&lt;/label&gt;
+  &lt;input type="text" id="street" name="street" /&gt;
+
+  &lt;label for="city"&gt;City&lt;/label&gt;
+  &lt;input type="text" id="city" name="city" /&gt;
+&lt;/fieldset&gt;</code></pre>
+
+<p>
+  <code>&lt;fieldset&gt;</code> and <code>&lt;legend&gt;</code> tie a group
+  together. It matters most for radio buttons: without it a screen reader
+  announces "Low" and "High" with no clue what they are choosing between.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">A sign-up form</h3>
+  </div>
+  <p>
+    Build a form with a name (required, at least 2 characters), an email
+    (required, correct type), a password (required, at least 8 characters), a
+    date of birth, a select for country with three options, and a required
+    "I agree to the terms" checkbox. Every field labelled properly. Try to
+    submit it empty and see what the browser says.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;form&gt;
+  &lt;label for="name"&gt;Full name&lt;/label&gt;
+  &lt;input type="text" id="name" name="name" minlength="2" required /&gt;
+
+  &lt;label for="email"&gt;Email&lt;/label&gt;
+  &lt;input type="email" id="email" name="email" autocomplete="email" required /&gt;
+
+  &lt;label for="password"&gt;Password&lt;/label&gt;
+  &lt;input type="password" id="password" name="password" minlength="8" required /&gt;
+
+  &lt;label for="dob"&gt;Date of birth&lt;/label&gt;
+  &lt;input type="date" id="dob" name="dob" /&gt;
+
+  &lt;label for="country"&gt;Country&lt;/label&gt;
+  &lt;select id="country" name="country"&gt;
+    &lt;option value="ph"&gt;Philippines&lt;/option&gt;
+    &lt;option value="sg"&gt;Singapore&lt;/option&gt;
+    &lt;option value="jp"&gt;Japan&lt;/option&gt;
+  &lt;/select&gt;
+
+  &lt;input type="checkbox" id="terms" name="terms" required /&gt;
+  &lt;label for="terms"&gt;I agree to the terms&lt;/label&gt;
+
+  &lt;button type="submit"&gt;Create account&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Watch a GET submit</h3>
+  </div>
+  <p>
+    Give a form <code>method="get"</code> with two text inputs named
+    <code>q</code> and <code>sort</code>. Fill them in, submit, and look at the
+    address bar. Now change to <code>method="post"</code> and submit again.
+    What changed, and why is GET the right choice for a search box?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      With GET the values appear in the URL as
+      <code>?q=shoes&amp;sort=price</code>. That URL can be bookmarked, shared
+      and re-loaded, which is exactly what you want for a search result. With
+      POST the URL stays clean and the values travel in the body — right for
+      anything that <em>changes</em> something, because a URL that creates data
+      when opened is a URL that fires again every time someone hits reload.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Find it in the project</h3>
+  </div>
+  <p>
+    Open <code>public/index.html</code> and find the composer form. Which
+    attributes limit what can be typed? Then open <code>server.js</code> and
+    find where the same rule is enforced again. Why is it in both places?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      The HTML uses <code>required</code> and <code>maxlength="200"</code>. In
+      <code>server.js</code>, <code>handleApi</code> rejects a title that is
+      empty after trimming or longer than 200 characters with a
+      <code>400</code>. The client copy makes the app feel responsive — you find
+      out instantly, without a round trip. The server copy is the one that
+      actually protects the data, because the client can be bypassed entirely.
+    </p>
+  </details>
+</div>

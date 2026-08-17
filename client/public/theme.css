@@ -1,0 +1,264 @@
+/* ==========================================================================
+   theme.css — THE DESIGN SYSTEM
+
+   Shared by both parts of this project: the task tracker app and the lesson
+   site under /learn. Neither has its own colours or spacing; both pull from
+   the tokens defined here.
+
+   That is the point of splitting this file out. When two parts of a product
+   define their own greys, they drift apart within a week. One file, imported
+   twice, and they cannot.
+
+   Contents:
+     1. Design tokens  — every value the project is allowed to use
+     2. Theming        — light and dark
+     3. Reset          — flatten browser defaults
+     4. Utilities      — the handful of classes used everywhere
+   ========================================================================== */
+
+/* --- 1. DESIGN TOKENS ------------------------------------------------------
+   A design system is mostly this: a short list of allowed values.
+
+   Note the spacing scale. It is not 1, 2, 3, 4 — it grows by roughly a factor
+   each step, because that is what the eye reads as deliberate. Every gap and
+   padding in this project is picked from this list. The moment you catch
+   yourself typing `padding: 13px`, the design has started to drift.
+   -------------------------------------------------------------------------- */
+:root {
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Type. Sizes in rem so they respect the reader's browser font setting —
+     px here would override someone who set a larger default because they
+     need it. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* Motion. Two durations and one curve, reused everywhere, so the whole
+     interface moves as though one hand made it. The curve starts fast and
+     eases out, which reads as responsive rather than sluggish. */
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --fast: 120ms;
+  --slow: 220ms;
+
+  /* Fonts */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
+
+  /* --- Light theme ------------------------------------------------------- */
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-sunken: #f1f2f6;
+  --surface-hover: #f7f8fa;
+  --border: #e5e7ec;
+  --border-strong: #d3d7de;
+  --text: #14171c;
+  --text-muted: #6b7382;
+  --text-faint: #9aa1ad;
+  --accent: #4f46e5;
+  --accent-hover: #443bd4;
+  --accent-soft: #eeecfd;
+  --on-accent: #ffffff;
+  --danger: #d92d20;
+  --danger-soft: #fdeceb;
+  --success: #067647;
+  --success-soft: #e6f5ee;
+  --warning: #b54708;
+  --warning-soft: #fdf3e7;
+
+  /* Code blocks keep a dark background in both themes, the way an editor
+     does. It reads as "this is code" before you have parsed a single word. */
+  --code-bg: #16191e;
+  --code-text: #e9ecf1;
+  --code-comment: #7f8899;
+  --code-keyword: #c4a2ff;
+  --code-string: #8fd6a0;
+  --code-number: #f0a878;
+
+  /* Layered shadows. One shadow looks like a sticker; two — a tight dark one
+     for contact and a wide soft one for depth — looks like an object resting
+     on a surface. */
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 2px 4px rgb(16 24 40 / 0.04), 0 8px 20px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 4px 8px rgb(16 24 40 / 0.06), 0 16px 40px rgb(16 24 40 / 0.14);
+}
+
+/* --- 2. THEMING ------------------------------------------------------------
+   Dark mode redefines the tokens and nothing else. Every rule in every other
+   file was written once and works in both themes untouched. That is the whole
+   return on using variables.
+
+   Two selectors, because there are two ways to end up in dark mode:
+     a) the operating system is set to dark and the reader has not overridden it
+     b) the reader pressed our toggle
+   -------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e1013;
+    --surface: #16191e;
+    --surface-sunken: #1b1f26;
+    --surface-hover: #1e222a;
+    --border: #262b34;
+    --border-strong: #363d49;
+    --text: #e9ecf1;
+    --text-muted: #939bab;
+    --text-faint: #6b7382;
+    --accent: #7c76ff;
+    --accent-hover: #8f8aff;
+    --accent-soft: #1f1d3d;
+    --on-accent: #ffffff;
+    --danger: #ff6a5e;
+    --danger-soft: #33191a;
+    --success: #4ade80;
+    --success-soft: #10241a;
+    --warning: #fbbf5c;
+    --warning-soft: #2a2013;
+    --code-bg: #101317;
+
+    /* Shadows barely register on a dark background — depth there comes from
+       lighter surfaces instead. Keep them subtle and let the contrast between
+       --surface and --bg do the work. */
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 20px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.5);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e1013;
+  --surface: #16191e;
+  --surface-sunken: #1b1f26;
+  --surface-hover: #1e222a;
+  --border: #262b34;
+  --border-strong: #363d49;
+  --text: #e9ecf1;
+  --text-muted: #939bab;
+  --text-faint: #6b7382;
+  --accent: #7c76ff;
+  --accent-hover: #8f8aff;
+  --accent-soft: #1f1d3d;
+  --on-accent: #ffffff;
+  --danger: #ff6a5e;
+  --danger-soft: #33191a;
+  --success: #4ade80;
+  --success-soft: #10241a;
+  --warning: #fbbf5c;
+  --warning-soft: #2a2013;
+  --code-bg: #101317;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 8px 20px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.5);
+}
+
+/* --- 3. RESET -------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  /* Makes `width` mean the whole visible width, padding and border included.
+     Set it once, then never be surprised by a layout again. */
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Form controls do not inherit fonts. Without this they fall back to the
+   browser's own, and your careful typography ends at the first <input>. */
+input,
+button,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* --- 4. UTILITIES ---------------------------------------------------------- */
+
+/* The `hidden` attribute works by way of a browser default rule,
+   `[hidden] { display: none }`, which has almost no specificity. So the moment
+   you write `.toast { display: flex }`, your class wins and the element stays
+   visible even with `hidden` set — a genuinely baffling bug the first time you
+   meet it.
+
+   This line makes the attribute mean what everyone assumes it means. It is one
+   of the very few justified uses of !important. */
+[hidden] {
+  display: none !important;
+}
+
+/* Every icon in this project is drawn with strokes rather than filled shapes,
+   so the settings live here once instead of on each one. `currentColor` means
+   an icon is automatically the same colour as the text beside it. */
+.icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* `:focus-visible` shows the ring for keyboard users but not on mouse clicks.
+   This is the modern answer to the old, bad habit of writing `outline: none`,
+   which makes an interface unusable without a mouse. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Visible to screen readers, invisible on screen. Note it stays 1px and
+   clipped rather than `display: none` — hidden elements are not announced
+   at all, which would defeat the purpose. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Some people get motion sick from interface animation, and their operating
+   system lets them say so. Honouring it costs five lines.
+
+   We do not remove transitions entirely — 0.01ms keeps any code that waits
+   for a `transitionend` event working, while removing the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

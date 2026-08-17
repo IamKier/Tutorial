@@ -1,0 +1,314 @@
+<h1>Semantics and accessibility <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  You can build any page out of <code>&lt;div&gt;</code>. The reason not to is
+  that a <code>div</code> tells the browser nothing — and the browser is the
+  thing that has to explain your page to a screen reader, a search engine and a
+  keyboard.
+</p>
+
+<h2>The same page, twice</h2>
+
+<pre><code>&lt;!-- Works. Means nothing. --&gt;
+&lt;div class="header"&gt;
+  &lt;div class="nav"&gt;...&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="main"&gt;
+  &lt;div class="post"&gt;
+    &lt;div class="title"&gt;Making bread&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="footer"&gt;...&lt;/div&gt;</code></pre>
+
+<pre><code>&lt;!-- Same layout. Now it means something. --&gt;
+&lt;header&gt;
+  &lt;nav&gt;...&lt;/nav&gt;
+&lt;/header&gt;
+&lt;main&gt;
+  &lt;article&gt;
+    &lt;h1&gt;Making bread&lt;/h1&gt;
+  &lt;/article&gt;
+&lt;/main&gt;
+&lt;footer&gt;...&lt;/footer&gt;</code></pre>
+
+<p>
+  Identical on screen. But in the second version a screen reader user can press
+  one key to jump to the main content, another to list every section, and skip
+  the navigation entirely. In the first they have to listen to everything from
+  the top, every time.
+</p>
+
+<h2>The landmark elements</h2>
+
+<table>
+  <thead>
+    <tr><th>Element</th><th>Use it for</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>&lt;header&gt;</code></td><td>Introductory content — a page or section header</td></tr>
+    <tr><td><code>&lt;nav&gt;</code></td><td>A block of navigation links</td></tr>
+    <tr><td><code>&lt;main&gt;</code></td><td>The main content. <strong>One per page.</strong></td></tr>
+    <tr><td><code>&lt;article&gt;</code></td><td>Something self-contained: a post, a comment, a product card</td></tr>
+    <tr><td><code>&lt;section&gt;</code></td><td>A thematic group, normally with a heading</td></tr>
+    <tr><td><code>&lt;aside&gt;</code></td><td>Related but tangential — a sidebar, a pull quote</td></tr>
+    <tr><td><code>&lt;footer&gt;</code></td><td>Closing content for a page or section</td></tr>
+  </tbody>
+</table>
+
+<p>
+  The test for <code>&lt;article&gt;</code>: would this still make sense lifted
+  out and shown on its own? A blog post would. A sidebar would not.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">In this project</span>
+  <p>
+    <code>learn/index.html</code> uses <code>&lt;aside&gt;</code> for the
+    sidebar, <code>&lt;nav&gt;</code> for the lesson list and
+    <code>&lt;main&gt;</code> for the lesson. That is why the "Skip to lesson"
+    link at the top works — it jumps past the whole sidebar. Press Tab as soon
+    as this page loads and you will see it.
+  </p>
+</div>
+
+<h2>Buttons and links are not interchangeable</h2>
+
+<p>The single most common accessibility mistake on the web:</p>
+
+<pre><code>&lt;!-- Broken: not focusable, not keyboard-operable,
+     not announced as anything --&gt;
+&lt;div onclick="save()"&gt;Save&lt;/div&gt;
+
+&lt;!-- Correct --&gt;
+&lt;button type="button" onclick="save()"&gt;Save&lt;/button&gt;</code></pre>
+
+<p>A real <code>&lt;button&gt;</code> gives you, for free:</p>
+
+<ul>
+  <li>Tab focus, and a visible focus ring</li>
+  <li>Enter and Space both activate it</li>
+  <li>Screen readers announce "Save, button"</li>
+  <li>A <code>disabled</code> state that actually blocks interaction</li>
+</ul>
+
+<p>Choosing between the two:</p>
+
+<ul>
+  <li><strong><code>&lt;a href&gt;</code></strong> goes somewhere. It can be middle-clicked, opened in a new tab, copied.</li>
+  <li><strong><code>&lt;button&gt;</code></strong> does something on this page.</li>
+</ul>
+
+<p>
+  In <code>public/index.html</code>, the "open the lessons" control is an
+  <code>&lt;a&gt;</code> because it navigates; the theme switch is a
+  <code>&lt;button&gt;</code> because it acts.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Always set type on a button inside a form</span>
+  <p>
+    A <code>&lt;button&gt;</code> with no <code>type</code> defaults to
+    <code>type="submit"</code>. Put an unmarked "Clear" button in a form and
+    clicking it submits the form. Write <code>type="button"</code> unless you
+    mean submit.
+  </p>
+</div>
+
+<h2>ARIA: the escape hatch</h2>
+
+<p>
+  ARIA attributes add meaning that HTML cannot express on its own. The first
+  rule of ARIA is not to use it — if a real element does the job, use that
+  instead, because a real element brings behaviour and ARIA only relabels.
+</p>
+
+<p>The handful that earn their place:</p>
+
+<pre><code>&lt;!-- Names an icon-only control --&gt;
+&lt;button aria-label="Delete task"&gt;×&lt;/button&gt;
+
+&lt;!-- Marks a toggle's current state --&gt;
+&lt;button aria-pressed="true"&gt;Bold&lt;/button&gt;
+
+&lt;!-- Marks the current page in a nav --&gt;
+&lt;a href="/learn/" aria-current="page"&gt;Learn&lt;/a&gt;
+
+&lt;!-- Hides decoration from screen readers --&gt;
+&lt;svg aria-hidden="true"&gt;...&lt;/svg&gt;
+
+&lt;!-- Announces content that appears later --&gt;
+&lt;p role="alert"&gt;Could not save.&lt;/p&gt;
+
+&lt;!-- Ties a control to what it controls --&gt;
+&lt;button aria-expanded="false" aria-controls="menu"&gt;Menu&lt;/button&gt;
+&lt;div id="menu" hidden&gt;...&lt;/div&gt;</code></pre>
+
+<p>
+  All six appear in this project. The delete button on a task is an icon with
+  <code>aria-label</code>; the filter tabs use <code>aria-pressed</code>; the
+  error toast uses <code>role="alert"</code>; the mobile menu button uses
+  <code>aria-expanded</code>.
+</p>
+
+<h2>Keyboard access</h2>
+
+<p>
+  Unplug your mouse and try to use your page. Everything interactive must be
+  reachable with Tab and operable with Enter or Space.
+</p>
+
+<pre><code>tabindex="0"    &lt;!-- add to the tab order (rarely needed) --&gt;
+tabindex="-1"   &lt;!-- focusable by script only, not by Tab --&gt;
+tabindex="3"    &lt;!-- never do this --&gt;</code></pre>
+
+<p>
+  Positive <code>tabindex</code> values jump the queue and scramble the tab
+  order for the whole page. If you need a different order, change the order of
+  the HTML.
+</p>
+
+<p>
+  <code>tabindex="-1"</code> is genuinely useful, though: it lets JavaScript
+  move focus somewhere that is not normally focusable. That is exactly what
+  <code>learn/index.html</code> does on <code>&lt;main&gt;</code> — when you
+  open a lesson, <code>learn.js</code> calls <code>.focus()</code> on it, so a
+  keyboard user lands in the new content instead of being stranded in the
+  sidebar.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never write outline: none</span>
+  <p>
+    Removing the focus ring makes a page unusable without a mouse — you cannot
+    see where you are. If the default ring is ugly, replace it, do not delete
+    it. Use <code>:focus-visible</code>, which shows the ring for keyboard users
+    but not on mouse clicks. That rule is in <code>theme.css</code>.
+  </p>
+</div>
+
+<h2>Images, headings, contrast</h2>
+
+<ul>
+  <li><strong>Alt text</strong> on every image. Empty <code>alt=""</code> for decoration, which tells the screen reader to skip it.</li>
+  <li><strong>One <code>h1</code></strong> per page, and never skip a level. Heading structure is how many people navigate.</li>
+  <li><strong>Contrast</strong> of at least 4.5:1 for body text. DevTools shows the ratio when you inspect a colour — grey-on-white placeholder text is the usual offender.</li>
+  <li><strong>Never colour alone.</strong> A red border on an invalid field is invisible to a colour-blind user; add text or an icon.</li>
+</ul>
+
+<h2>Ten minutes of checking</h2>
+
+<ol>
+  <li>Tab through the page. Can you reach everything? Can you see where you are?</li>
+  <li>Zoom to 200%. Does anything overlap or get cut off?</li>
+  <li>Run Lighthouse in DevTools (the Accessibility section). It catches the mechanical problems.</li>
+  <li>Turn on your OS screen reader — Narrator on Windows (Ctrl+Win+Enter), VoiceOver on Mac (Cmd+F5) — and listen to one screen.</li>
+</ol>
+
+<p>
+  That last one is uncomfortable the first time and it teaches more than any
+  checklist.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Rewrite the div soup</h3>
+  </div>
+  <p>Replace every <code>div</code> below with a meaningful element:</p>
+<pre><code>&lt;div class="page-header"&gt;
+  &lt;div class="site-title"&gt;My blog&lt;/div&gt;
+  &lt;div class="menu"&gt;
+    &lt;a href="/"&gt;Home&lt;/a&gt; &lt;a href="/about"&gt;About&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="content"&gt;
+  &lt;div class="post"&gt;
+    &lt;div class="post-title"&gt;First post&lt;/div&gt;
+    &lt;div class="post-body"&gt;Hello there.&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="page-footer"&gt;© 2026&lt;/div&gt;</code></pre>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;header&gt;
+  &lt;h1&gt;My blog&lt;/h1&gt;
+  &lt;nav aria-label="Main"&gt;
+    &lt;a href="/"&gt;Home&lt;/a&gt; &lt;a href="/about"&gt;About&lt;/a&gt;
+  &lt;/nav&gt;
+&lt;/header&gt;
+&lt;main&gt;
+  &lt;article&gt;
+    &lt;h2&gt;First post&lt;/h2&gt;
+    &lt;p&gt;Hello there.&lt;/p&gt;
+  &lt;/article&gt;
+&lt;/main&gt;
+&lt;footer&gt;© 2026&lt;/footer&gt;</code></pre>
+    <p>
+      Note the heading levels: the site title is the <code>h1</code>, so the post
+      title becomes an <code>h2</code>. On a page showing one post you would
+      flip that — the post is the point of the page.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Audit the task tracker</h3>
+  </div>
+  <p>
+    Open the app, press Tab repeatedly from the top, and write down what gets
+    focus in order. Can you add a task, tick it and delete it without touching
+    the mouse? Anything you cannot reach is a bug — find out why.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      Everything is reachable. The delete button is the interesting case: it is
+      invisible until you hover the row, but <code>styles.css</code> also shows
+      it on <code>:focus-visible</code>, so tabbing to it makes it appear. A
+      hover-only control without that partner rule is unreachable by keyboard —
+      one of the most common bugs in otherwise well-built interfaces.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Build an accessible toggle</h3>
+  </div>
+  <p>
+    Write a button that shows and hides a paragraph. It must announce its state
+    to a screen reader and say which element it controls — without any CSS.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;button type="button" id="toggle"
+        aria-expanded="false" aria-controls="details"&gt;
+  Show details
+&lt;/button&gt;
+
+&lt;p id="details" hidden&gt;The hidden details.&lt;/p&gt;
+
+&lt;script&gt;
+  const button = document.getElementById('toggle');
+  const details = document.getElementById('details');
+
+  button.addEventListener('click', () =&gt; {
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', String(!isOpen));
+    button.textContent = isOpen ? 'Show details' : 'Hide details';
+    details.hidden = isOpen;
+  });
+&lt;/script&gt;</code></pre>
+    <p>
+      Worth knowing: HTML has <code>&lt;details&gt;</code> and
+      <code>&lt;summary&gt;</code>, which do all of this natively with no
+      JavaScript at all — that is what the "Show solution" toggles on this page
+      are. Check for a built-in element before building your own.
+    </p>
+  </details>
+</div>

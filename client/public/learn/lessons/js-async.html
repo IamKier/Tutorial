@@ -1,0 +1,358 @@
+<h1>Async, promises and fetch <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  This is where the frontend meets the backend, and it is the concept most
+  people find genuinely hard. Slow down here — everything in the second half of
+  the course depends on it.
+</p>
+
+<h2>The problem</h2>
+
+<p>
+  JavaScript runs on a single thread. There is one queue, and while your code is
+  running nothing else can — no clicks, no rendering, nothing.
+</p>
+
+<p>
+  So what happens when you ask a server for data and it takes 300 milliseconds
+  to answer? If the language simply waited, the page would freeze solid every
+  time. Instead, slow work is handed off, your code carries on, and you are
+  notified when the result arrives.
+</p>
+
+<p>That is what asynchronous means. Everything below is machinery for it.</p>
+
+<h2>Promises</h2>
+
+<p>
+  A promise is an object representing a value that is not here yet. It is in one
+  of three states: <strong>pending</strong>, then either
+  <strong>fulfilled</strong> with a value or <strong>rejected</strong> with an
+  error.
+</p>
+
+<pre><code>const promise = fetch('/api/tasks');
+console.log(promise);   // Promise { &lt;pending&gt; }</code></pre>
+
+<p>The original way to unwrap one:</p>
+
+<pre><code>fetch('/api/tasks')
+  .then(response =&gt; response.json())
+  .then(tasks =&gt; console.log(tasks))
+  .catch(err =&gt; console.error(err));</code></pre>
+
+<h2>async and await</h2>
+
+<p>The modern way, which is the same thing written to read top to bottom:</p>
+
+<pre><code>async function loadTasks() {
+  try {
+    const response = await fetch('/api/tasks');
+    const tasks = await response.json();
+    console.log(tasks);
+  } catch (err) {
+    console.error(err);
+  }
+}</code></pre>
+
+<p>Two rules and you have it:</p>
+
+<ul>
+  <li><code>await</code> pauses <em>this function</em> until the promise settles. The rest of the page keeps running.</li>
+  <li><code>await</code> only works inside an <code>async</code> function. And an <code>async</code> function always returns a promise, whatever you write in the return.</li>
+</ul>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The forgotten await</span>
+  <p>
+    Leave out <code>await</code> and you get the promise object instead of the
+    value. <code>const tasks = fetch(...)</code> then <code>tasks.length</code>
+    is <code>undefined</code> — no error, just nonsense. When a value is
+    mysteriously <code>undefined</code> or logs as <code>Promise {}</code>,
+    a missing <code>await</code> is the first thing to check.
+  </p>
+</div>
+
+<h3>Order of execution</h3>
+
+<pre><code>console.log('1');
+
+setTimeout(() =&gt; console.log('2'), 0);
+
+Promise.resolve().then(() =&gt; console.log('3'));
+
+console.log('4');
+
+// Prints: 1, 4, 3, 2</code></pre>
+
+<p>
+  Synchronous code runs first and finishes. Then queued promise callbacks. Then
+  timers. Even a zero-millisecond timeout waits for the current work to finish —
+  "asynchronous" means "later", never "at the same time".
+</p>
+
+<h2>fetch</h2>
+
+<pre><code>// GET is the default
+const response = await fetch('/api/tasks');
+const tasks = await response.json();</code></pre>
+
+<p>
+  Note the <em>two</em> awaits. The first waits for the response headers to
+  arrive; the second waits for the body to finish downloading and be parsed.
+  They are separate because the headers arrive first, and sometimes that is all
+  you need.
+</p>
+
+<pre><code>// Sending data
+const response = await fetch('/api/tasks', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ title: 'Buy milk' }),
+});</code></pre>
+
+<ul>
+  <li><code>method</code> — GET, POST, PATCH, DELETE.</li>
+  <li><code>headers</code> — without <code>Content-Type</code>, most servers will not parse your body as JSON.</li>
+  <li><code>body</code> — must be a string. <code>JSON.stringify</code> on the way out; the server does <code>JSON.parse</code> on the way in. That round trip <em>is</em> the API.</li>
+</ul>
+
+<h3>The trap that catches everyone</h3>
+
+<pre><code>// WRONG
+try {
+  const response = await fetch('/api/tasks/does-not-exist');
+  const task = await response.json();   // no error thrown!
+} catch (err) {
+  // never runs for a 404
+}</code></pre>
+
+<p>
+  <strong><code>fetch</code> only rejects when the network fails.</strong> A 404
+  or a 500 is a perfectly successful fetch as far as the browser is concerned —
+  you asked, the server answered. You have to check yourself:
+</p>
+
+<pre><code>const response = await fetch(url);
+
+if (!response.ok) {                    // ok is true for 200-299
+  throw new Error(`Request failed (${response.status})`);
+}
+
+const data = await response.json();</code></pre>
+
+<p>
+  This is why <code>app.js</code> has a <code>request()</code> wrapper rather
+  than calling <code>fetch</code> in four places — one check, written once,
+  impossible to forget.
+</p>
+
+<pre><code>async function request(url, options = {}) {
+  const response = await fetch(url, options);
+
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (body.error) message = body.error;   // use the server's message
+    } catch { /* not JSON — the status will do */ }
+    throw new Error(message);
+  }
+
+  if (response.status === 204) return null;   // No Content: empty body
+  return response.json();
+}</code></pre>
+
+<h2>Running things at the same time</h2>
+
+<pre><code>// Sequential — 300ms, then another 300ms. Total 600ms.
+const a = await fetch('/api/one');
+const b = await fetch('/api/two');
+
+// Concurrent — both start immediately. Total 300ms.
+const [a, b] = await Promise.all([
+  fetch('/api/one'),
+  fetch('/api/two'),
+]);</code></pre>
+
+<p>
+  Use <code>Promise.all</code> whenever requests do not depend on each other. If
+  the second needs a value from the first, they have to be sequential.
+</p>
+
+<p>
+  The catch: <code>Promise.all</code> rejects as soon as <em>any</em> promise
+  rejects, and you lose the results of the ones that succeeded. When you need
+  every outcome regardless:
+</p>
+
+<pre><code>const results = await Promise.allSettled(promises);
+// [{status: 'fulfilled', value: ...}, {status: 'rejected', reason: ...}]</code></pre>
+
+<p>
+  The "Clear done" button in the app uses <code>Promise.all</code>, so ten
+  deletes take as long as the slowest one rather than ten times as long — and
+  because a partial failure would leave the screen out of step with the server,
+  the catch block reloads the list from scratch.
+</p>
+
+<h2>Handling the wait well</h2>
+
+<p>
+  Every request takes time and every request can fail. An interface that ignores
+  both feels broken on a slow connection. Three habits:
+</p>
+
+<pre><code>button.disabled = true;         // 1. stop double-submits
+try {
+  const task = await api.create(title);
+  tasks.unshift(task);
+  render();
+} catch (err) {
+  showError(err.message);       // 2. tell the user, in their terms
+} finally {
+  button.disabled = false;      // 3. always undo it
+}</code></pre>
+
+<p>
+  <code>finally</code> runs whether it succeeded or threw. Without it, one
+  failed request leaves the button disabled forever and the only fix is a
+  reload.
+</p>
+
+<h3>Optimistic updates</h3>
+
+<p>Two honest approaches to the wait:</p>
+
+<ul>
+  <li><strong>Wait for the server</strong>, then update the screen. Always accurate, feels slower.</li>
+  <li><strong>Update immediately</strong>, then put it back if the request fails. Feels instant, and the rollback is the entire difficulty.</li>
+</ul>
+
+<pre><code>// Optimistic delete
+const backup = [...tasks];
+tasks = tasks.filter(t =&gt; t.id !== id);
+render();                            // gone from the screen instantly
+
+try {
+  await api.remove(id);
+} catch (err) {
+  tasks = backup;                    // put it back
+  render();
+  showError('Could not delete that.');
+}</code></pre>
+
+<p>
+  The task tracker takes the first approach, with one cosmetic exception: the
+  row starts fading out while the request is in flight, so it feels quick
+  without claiming anything that has not happened yet.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Talk to the API from the console</h3>
+  </div>
+  <p>
+    With the app open, use the DevTools console. Fetch all tasks and log them.
+    Then create one. Then fetch again to confirm it is there. Watch each request
+    appear in the Network tab as you go.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>// List
+const tasks = await (await fetch('/api/tasks')).json();
+console.table(tasks);
+
+// Create
+const created = await (await fetch('/api/tasks', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ title: 'From the console' }),
+})).json();
+console.log(created);
+
+// Confirm
+console.table(await (await fetch('/api/tasks')).json());</code></pre>
+    <p>
+      Note that the task appears in the file but not on screen until you reload —
+      the page's <code>tasks</code> array knows nothing about what you did behind
+      its back. That gap between client state and server state is the permanent
+      background problem of frontend work.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Make fetch fail quietly</h3>
+  </div>
+  <p>
+    In the console, run this and explain what you see:
+  </p>
+<pre><code>const response = await fetch('/api/tasks/nope');
+console.log(response.ok, response.status);
+const data = await response.json();
+console.log(data);</code></pre>
+  <p>Then write a version that throws a useful error instead.</p>
+  <details>
+    <summary>Show solution</summary>
+    <p>
+      You get <code>false 404</code> and then <code>{error: 'Task not found'}</code>.
+      No exception at any point — which is exactly the trap. A careless
+      <code>const tasks = await response.json()</code> would hand you an error
+      object where you expected an array, and the crash would happen somewhere
+      else entirely.
+    </p>
+<pre><code>async function getJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    const body = await response.json().catch(() =&gt; ({}));
+    throw new Error(body.error ?? `Request failed (${response.status})`);
+  }
+  return response.json();
+}</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Make deletes optimistic</h3>
+  </div>
+  <p>
+    In <code>public/app.js</code>, change the delete handler so the task
+    disappears immediately and is restored if the request fails. Test the
+    failure path by stopping the server (Ctrl+C) and then deleting a task.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>if (event.target.closest('.task__delete')) {
+  const backup = [...tasks];
+
+  tasks = tasks.filter(t =&gt; t.id !== id);
+  render();                       // instant
+
+  try {
+    await api.remove(id);
+  } catch (err) {
+    tasks = backup;               // put it back
+    render();
+    showError('Could not delete that task.');
+  }
+}</code></pre>
+    <p>
+      Note <code>[...tasks]</code> rather than <code>tasks</code> — you need a
+      copy of the array as it was, not another reference to the one you are
+      about to replace.
+    </p>
+    <p>
+      With the server stopped you will see the row vanish and reappear, with an
+      error toast. That flicker is the honest cost of optimism: you told the user
+      something had happened before you knew it had.
+    </p>
+  </details>
+</div>

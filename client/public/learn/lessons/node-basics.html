@@ -1,0 +1,358 @@
+<h1>Node fundamentals <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  Node is JavaScript running outside a browser. Same language, different powers:
+  no <code>document</code> and no <code>window</code>, but it can read files,
+  open network ports and talk to a database.
+</p>
+
+<h2>Two runtimes, one language</h2>
+
+<table>
+  <thead>
+    <tr><th></th><th>Browser</th><th>Node</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Runs on</td><td>The user's machine</td><td>Your server</td></tr>
+    <tr><td>Can read files</td><td>No</td><td>Yes</td></tr>
+    <tr><td>Has <code>document</code></td><td>Yes</td><td>No</td></tr>
+    <tr><td>Has <code>fetch</code></td><td>Yes</td><td>Yes (since v18)</td></tr>
+    <tr><td>Trusted with secrets</td><td><strong>Never</strong></td><td>Yes</td></tr>
+  </tbody>
+</table>
+
+<p>
+  That last row is the important one. Anything you send to the browser is
+  readable by whoever is using it — API keys, database passwords, other people's
+  data. Secrets live on the server and never leave it.
+</p>
+
+<pre><code>node server.js      # run a file
+node                # a REPL, for trying things
+node --check x.js   # parse without running — a quick syntax check</code></pre>
+
+<h2>Modules</h2>
+
+<p>There are two module systems in the wild. Use the modern one:</p>
+
+<pre><code>// ES modules (ESM) — what this project uses
+import fs from 'node:fs/promises';
+export function listTasks() { }
+
+// CommonJS — older, still everywhere in tutorials
+const fs = require('fs');
+module.exports = { listTasks };</code></pre>
+
+<p>To get ESM you need one line in <code>package.json</code>:</p>
+
+<pre><code>{
+  "type": "module"
+}</code></pre>
+
+<p>
+  Without it, Node treats <code>.js</code> files as CommonJS and
+  <code>import</code> throws a confusing syntax error. That single line is the
+  cause of most "cannot use import statement outside a module" questions.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">Import paths differ from the browser</span>
+  <p>
+    In Node you must include the file extension —
+    <code>import * as db from './db.js'</code>, not <code>'./db'</code>. And
+    built-in modules take the <code>node:</code> prefix
+    (<code>node:fs</code>, <code>node:path</code>), which makes it obvious at a
+    glance that they are not packages someone installed.
+  </p>
+</div>
+
+<h2>The built-ins worth knowing</h2>
+
+<h3>fs — files</h3>
+
+<pre><code>import fs from 'node:fs/promises';
+
+const text = await fs.readFile('data.json', 'utf8');
+await fs.writeFile('data.json', JSON.stringify(data, null, 2), 'utf8');
+await fs.mkdir('data', { recursive: true });
+await fs.rm('old.txt');</code></pre>
+
+<p>
+  Always import from <code>node:fs/promises</code>, not <code>node:fs</code>.
+  The plain version is callback-based and leads straight to nested callbacks;
+  the promises version works with <code>await</code>.
+</p>
+
+<p>
+  Two details from <code>db.js</code> in this project. Passing
+  <code>'utf8'</code> gets you a string; leave it off and you get a
+  <code>Buffer</code> of raw bytes. And <code>recursive: true</code> on
+  <code>mkdir</code> means "create it, and do not complain if it already
+  exists", which saves an if-exists check.
+</p>
+
+<h3>path — file paths</h3>
+
+<pre><code>import path from 'node:path';
+
+path.join(__dirname, 'data', 'tasks.json');
+path.extname('styles.css');    // '.css'
+path.basename('/a/b/c.txt');   // 'c.txt'</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never build paths with string concatenation</span>
+  <p>
+    <code>dir + '/' + file</code> breaks on Windows, doubles up separators, and
+    lets <code>..</code> sneak through. <code>path.join</code> normalises all of
+    that. This is not pedantry — path handling done by hand is a real source of
+    security holes, as the static file server in this project shows.
+  </p>
+</div>
+
+<p>ESM has no <code>__dirname</code>, so you reconstruct it:</p>
+
+<pre><code>import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));</code></pre>
+
+<p>
+  <code>import.meta.url</code> is the current file's own location as a URL. The
+  point of this dance is that your paths then work no matter which directory
+  someone runs <code>node</code> from.
+</p>
+
+<h3>http — a server</h3>
+
+<pre><code>import http from 'node:http';
+
+const server = http.createServer((req, res) =&gt; {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Hello');
+});
+
+server.listen(3000, () =&gt; {
+  console.log('http://localhost:3000');
+});</code></pre>
+
+<p>
+  That is a complete web server. <code>createServer</code> takes one function
+  and Node calls it for <strong>every</strong> incoming request, handing you two
+  objects:
+</p>
+
+<ul>
+  <li><code>req</code> — what was asked for: <code>req.method</code>, <code>req.url</code>, <code>req.headers</code>, and the body as a stream.</li>
+  <li><code>res</code> — how you answer: <code>res.writeHead(status, headers)</code> then <code>res.end(body)</code>.</li>
+</ul>
+
+<p>
+  That request/response pair is the whole of backend work. Everything else is
+  organisation.
+</p>
+
+<h3>crypto — ids</h3>
+
+<pre><code>import crypto from 'node:crypto';
+
+crypto.randomUUID();   // 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6'</code></pre>
+
+<p>
+  Why not 1, 2, 3? Because two requests arriving at the same moment could both
+  read "the highest id is 4" and both decide to be 5. Random ids sidestep that
+  entirely, and they do not leak how many records you have.
+</p>
+
+<h2>Reading a request body</h2>
+
+<p>This is the part that surprises people:</p>
+
+<pre><code>async function readJsonBody(req) {
+  const chunks = [];
+  let size = 0;
+
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size &gt; 1_000_000) throw new Error('Request body too large');
+    chunks.push(chunk);
+  }
+
+  const raw = Buffer.concat(chunks).toString('utf8');
+  return raw ? JSON.parse(raw) : {};
+}</code></pre>
+
+<p>
+  A request body does not arrive all at once. It comes in pieces as they travel
+  across the network, so <code>req</code> is a <strong>stream</strong> and you
+  loop over the chunks as they land.
+</p>
+
+<p>
+  The size cap matters. Without it, one request with an endless body eats all
+  your server's memory until it dies. Express's
+  <code>express.json({ limit: '1mb' })</code> is doing exactly this for you.
+</p>
+
+<h2>Async on the server</h2>
+
+<p>
+  Node runs your JavaScript on a single thread — the same model as the browser.
+  Anything slow must be asynchronous, or the whole server stops answering
+  <em>everyone</em> while it waits.
+</p>
+
+<pre><code>// Fine: this thread is free to serve other requests while it waits
+const data = await fs.readFile('big.json', 'utf8');
+
+// Catastrophic: nothing else can happen until this finishes
+const data = fsSync.readFileSync('big.json', 'utf8');</code></pre>
+
+<p>
+  The <code>...Sync</code> functions exist and are fine in a build script or at
+  startup. Inside a request handler they are a bug: one slow read freezes every
+  other user.
+</p>
+
+<h2>Environment and arguments</h2>
+
+<pre><code>process.env.PORT           // environment variables
+process.argv               // command-line arguments
+process.exit(1);           // quit with an error code
+console.error('bad');      // writes to stderr, not stdout</code></pre>
+
+<pre><code>const PORT = process.env.PORT ?? 3000;</code></pre>
+
+<p>
+  Environment variables are how configuration and secrets reach a server without
+  being written in the code. A database password in a source file ends up in
+  version control, and from there in everyone's laptop backup.
+</p>
+
+<h2>Packages</h2>
+
+<pre><code>npm init -y            # create package.json
+npm install express    # add a dependency
+npm install --save-dev nodemon
+npm run start          # run a script from package.json</code></pre>
+
+<pre><code>{
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "express": "^4.19.2" }
+}</code></pre>
+
+<ul>
+  <li><code>node_modules/</code> holds the installed code. Never commit it — it is rebuilt from the lock file.</li>
+  <li><code>package-lock.json</code> pins exact versions. <strong>Always</strong> commit it, or two machines get different code from the same <code>package.json</code>.</li>
+</ul>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Why this project installs nothing</span>
+  <p>
+    Every dependency is code you did not read running with your privileges, and
+    a package with fifty transitive dependencies is fifty chances for that to go
+    wrong. This project has zero on purpose — partly to teach the built-ins, and
+    partly because "do I actually need this?" is a question worth asking every
+    time.
+  </p>
+</div>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">A file-backed counter</h3>
+  </div>
+  <p>
+    Write <code>counter.js</code> that reads a number from
+    <code>count.txt</code>, adds one, writes it back and prints it. Run it three
+    times. It must work on the first run, when the file does not exist yet.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>import fs from 'node:fs/promises';
+
+const FILE = 'count.txt';
+
+async function readCount() {
+  try {
+    return Number(await fs.readFile(FILE, 'utf8'));
+  } catch (err) {
+    // ENOENT means the file is not there — on a first run that is
+    // expected, not an error. Anything else is a real problem.
+    if (err.code === 'ENOENT') return 0;
+    throw err;
+  }
+}
+
+const count = (await readCount()) + 1;
+await fs.writeFile(FILE, String(count), 'utf8');
+console.log(count);</code></pre>
+    <p>
+      That try/catch is the same pattern as <code>readAll</code> in
+      <code>db.js</code>: handle the one error you expect, re-throw the rest.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">A server in ten lines</h3>
+  </div>
+  <p>
+    Write a server on port 3001 that answers <code>/</code> with "Hello",
+    <code>/time</code> with the current time, and anything else with a 404. Log
+    every request.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>import http from 'node:http';
+
+http.createServer((req, res) =&gt; {
+  console.log(req.method, req.url);
+
+  if (req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Hello');
+  } else if (req.url === '/time') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end(new Date().toISOString());
+  } else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not found');
+  }
+}).listen(3001, () =&gt; console.log('http://localhost:3001'));</code></pre>
+    <p>
+      Note that you must restart Node to see a change — unlike a browser, there
+      is no reload. That is what <code>node --watch server.js</code> is for.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Feel the blocking</h3>
+  </div>
+  <p>
+    Add a <code>/slow</code> route that runs a busy loop for three seconds
+    (<code>while (Date.now() - start &lt; 3000) {}</code>). Open
+    <code>/slow</code> in one tab and immediately <code>/</code> in another.
+    What happens, and why?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      The second tab hangs until the first finishes. One request froze the
+      entire server for everybody — because Node runs your JavaScript on one
+      thread, and a busy loop never gives it up.
+    </p>
+    <p>
+      This is the difference between <em>waiting</em> and <em>working</em>.
+      <code>await fs.readFile(...)</code> waits, and the thread is free to serve
+      other requests meanwhile. A busy loop, a synchronous read, or a heavy
+      calculation works, and nothing else can happen. When people say Node is
+      bad at CPU-heavy tasks, this is what they mean.
+    </p>
+  </details>
+</div>
