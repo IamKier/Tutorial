@@ -19,15 +19,15 @@
 //
 // The alternation order matters: comments and strings come first, so a keyword
 // inside a string is not coloured as a keyword.
-const TOKEN_RE = new RegExp(
-  [
-    '(?<comment>//[^\n]*|/\*[\s\S]*?\*/|<!--[\s\S]*?-->)',
-    '(?<string>\'(?:[^\'\\\n]|\\.)*\'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`)',
-    '(?<keyword>\b(?:const|let|var|function|return|if|else|for|of|in|while|await|async|class|new|try|catch|finally|import|export|from|throw|typeof|instanceof|null|true|false|undefined|this)\b)',
-    '(?<number>\b\d+(?:\.\d+)?\b)',
-  ].join('|'),
-  'g'
-);
+// Written as a regex LITERAL rather than built from strings.
+//
+// The string form needs every backslash doubled — '\\s' to mean \s — and a
+// single lost backslash turns the pattern into something that either matches
+// nothing or, as happened here once, throws at construction and takes the
+// whole application down with it. A literal has no such escaping layer: what
+// you read is what the engine gets.
+const TOKEN_RE =
+  /(?<comment>\/\/[^\n]*|\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->)|(?<string>'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`)|(?<keyword>\b(?:const|let|var|function|return|if|else|for|of|in|while|await|async|class|new|try|catch|finally|import|export|from|throw|typeof|instanceof|null|true|false|undefined|this)\b)|(?<number>\b\d+(?:\.\d+)?\b)/g;
 
 function highlight(codeEl) {
   const text = codeEl.textContent;
