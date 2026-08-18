@@ -65,7 +65,7 @@ export function Cover({ progress }) {
 
         <div className="cover__actions">
           {finished ? (
-            <a className="button button--primary" href={href.subjects()}>
+            <a className="button button--primary" href={href.library()}>
               Browse the catalogue
             </a>
           ) : (
@@ -75,7 +75,7 @@ export function Cover({ progress }) {
           )}
 
           {!finished && (
-            <a className="cover__secondary" href={href.subjects()}>
+            <a className="cover__secondary" href={href.library()}>
               or browse the catalogue
             </a>
           )}

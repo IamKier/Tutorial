@@ -12,7 +12,7 @@ import { useProgress } from './hooks/useProgress.js';
 import { useTheme } from './hooks/useTheme.js';
 import { TOTAL_CHAPTERS } from './content/catalogue.js';
 import { Cover } from './library/Cover.jsx';
-import { SubjectsPage } from './library/SubjectsPage.jsx';
+import { MainPage } from './library/MainPage.jsx';
 import { SubjectPage } from './library/SubjectPage.jsx';
 import { BookPage } from './library/BookPage.jsx';
 import { LessonPage } from './library/LessonPage.jsx';
@@ -84,7 +84,7 @@ export default function App() {
 
       <main className="shell">
         {route.name === 'home' && <Cover progress={progress} />}
-        {route.name === 'subjects' && <SubjectsPage progress={progress} />}
+        {route.name === 'library' && <MainPage progress={progress} />}
         {route.name === 'subject' && <SubjectPage subjectId={route.param} progress={progress} />}
         {route.name === 'book' && <BookPage bookId={route.param} progress={progress} />}
         {route.name === 'lesson' && <LessonPage slug={route.param} progress={progress} />}

@@ -1626,132 +1626,15 @@ kbd {
   height: 14px;
 }
 
-/* --- 16. SUBJECTS AND BOOKS -------------------------------------------------
-   A library of subjects, each holding a shelf of volumes.
-   -------------------------------------------------------------------------- */
-
-/* ---- The catalogue of subjects ----------------------------------------------- */
-.subject-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.subject-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-5);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: inherit;
-  text-decoration: none;
-  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
-}
-
-.subject-card:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
-}
-
-/* A row of spines standing in for the volumes inside — a shelf seen edge-on. */
-.subject-card__spines {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-  height: 3.5rem;
-}
-
-.subject-card__spine {
-  width: 6px;
-  height: 100%;
-  border-radius: 1px;
-}
-
-/* Alternating heights, so the row reads as books of different sizes rather
-   than as a bar chart. nth-child is doing the work no data could. */
-.subject-card__spine:nth-child(2n) {
-  height: 88%;
-}
-.subject-card__spine:nth-child(3n) {
-  height: 94%;
-}
-
-.subject-card__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.subject-card__title {
-  display: block;
-  font-family: var(--font-serif);
-  font-size: var(--text-xl);
-}
-
-.subject-card__tagline {
-  display: block;
-  margin-top: 0.15rem;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-.subject-card__note {
-  display: block;
-  margin-top: var(--space-3);
-  color: var(--text-faint);
-  font-size: var(--text-sm);
-  font-style: italic;
-  line-height: 1.5;
-}
-
-.subject-card__meta {
-  display: block;
-  margin-top: var(--space-3);
-  color: var(--text-faint);
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.subject-card__arrow {
-  flex-shrink: 0;
-  color: var(--text-faint);
-}
-
-.subject-list__note {
-  max-width: 34rem;
-  margin: var(--space-6) auto 0;
-  color: var(--text-faint);
-  font-size: var(--text-sm);
-  font-style: italic;
-  text-align: center;
-}
-
-/* ---- A book's own title page ------------------------------------------------ */
+/* --- 16. A BOOK'S OWN TITLE PAGE ------------------------------------------- */
 .book-head {
   padding-bottom: var(--space-5);
-  /* The spine colour carried through from the shelf, so an opened book still
-     looks like the one you picked up. */
+  /* The spine colour carried through from the shelf, so an opened volume still
+     looks like the one you pulled out. */
   border-bottom: 2px solid var(--spine);
   text-align: center;
 }
 
 .book-head .topic-head__numeral {
   color: var(--spine);
-}
-
-@media (max-width: 40rem) {
-  .subject-card {
-    flex-wrap: wrap;
-    gap: var(--space-4);
-  }
-
-  .subject-card__spines {
-    height: 2.5rem;
-  }
 }

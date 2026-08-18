@@ -86,7 +86,7 @@ export function LessonPage({ slug, progress }) {
       <div className="page">
         <h1>Chapter not found</h1>
         <p className="lead">
-          That link does not match a chapter. <a href={href.subjects()}>Back to the catalogue</a>.
+          That link does not match a chapter. <a href={href.library()}>Back to the catalogue</a>.
         </p>
       </div>
     );
@@ -100,7 +100,7 @@ export function LessonPage({ slug, progress }) {
     <div className="reader">
       <div className="reader__main">
         <nav className="crumbs" aria-label="Breadcrumb">
-          <a href={href.subjects()}>Library</a>
+          <a href={href.library()}>Library</a>
           <Icon name="chevronRight" />
           <a href={href.subject(lesson.subjectId)}>{lesson.subjectTitle}</a>
           <Icon name="chevronRight" />

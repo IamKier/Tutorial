@@ -11,6 +11,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import './styles/library.css';
+import './styles/main.css';
 import './styles/shelf.css';
 import './styles/app.css';
 

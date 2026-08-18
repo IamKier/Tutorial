@@ -121,7 +121,7 @@ test('the catalogue lists the subjects', { skip }, async (t) => {
   const server = await serve(4181);
   t.after(() => server.close());
 
-  const dom = await render('http://localhost:4181/#/subjects');
+  const dom = await render('http://localhost:4181/#/library');
 
   assert.doesNotMatch(dom, /<div id="root"><\/div>/, 'React did not mount');
   assert.match(dom, /subject-card__title/, 'the subject cards did not render');

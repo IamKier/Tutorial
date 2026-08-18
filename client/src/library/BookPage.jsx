@@ -18,7 +18,7 @@ export function BookPage({ bookId, progress }) {
       <div className="page">
         <h1>Volume not found</h1>
         <p className="lead">
-          That link does not match a book. <a href={href.subjects()}>Back to the catalogue</a>.
+          That link does not match a book. <a href={href.library()}>Back to the catalogue</a>.
         </p>
       </div>
     );
@@ -29,7 +29,7 @@ export function BookPage({ bookId, progress }) {
   return (
     <div className="page">
       <nav className="crumbs" aria-label="Breadcrumb">
-        <a href={href.subjects()}>Library</a>
+        <a href={href.library()}>Library</a>
         <Icon name="chevronRight" />
         <a href={href.subject(book.subjectId)}>{book.subjectTitle}</a>
         <Icon name="chevronRight" />

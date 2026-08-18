@@ -21,7 +21,7 @@ export function SubjectPage({ subjectId, progress }) {
       <div className="page">
         <h1>Subject not found</h1>
         <p className="lead">
-          Nothing on the shelves matches that. <a href={href.subjects()}>Back to the catalogue</a>.
+          Nothing on the shelves matches that. <a href={href.library()}>Back to the catalogue</a>.
         </p>
       </div>
     );
@@ -30,7 +30,7 @@ export function SubjectPage({ subjectId, progress }) {
   return (
     <div className="page">
       <nav className="crumbs" aria-label="Breadcrumb">
-        <a href={href.subjects()}>Library</a>
+        <a href={href.library()}>Library</a>
         <Icon name="chevronRight" />
         <span aria-current="page">{subject.title}</span>
       </nav>

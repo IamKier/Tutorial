@@ -12,7 +12,7 @@
 // without any server configuration at all:
 //
 //     #/                    the cover
-//     #/subjects            the catalogue of subjects
+//     #/library             the main page: where you left off, and the subjects
 //     #/subject/web-…      one subject's shelf of books
 //     #/book/css            one book's chapters
 //     #/lesson/css-basics   one chapter
@@ -34,7 +34,7 @@ function parse(hash) {
   if (name === 'lesson' && param) return { name: 'lesson', param };
   if (name === 'book' && param) return { name: 'book', param };
   if (name === 'subject' && param) return { name: 'subject', param };
-  if (name === 'subjects') return { name: 'subjects', param: null };
+  if (name === 'library') return { name: 'library', param: null };
   if (name === 'demo') return { name: 'demo', param: null };
 
   return { name: 'home', param: null };
@@ -68,7 +68,7 @@ export function useRouter() {
 /** Build the href for a route, so links are written in one style everywhere. */
 export const href = {
   home: () => '#/',
-  subjects: () => '#/subjects',
+  library: () => '#/library',
   subject: (id) => `#/subject/${id}`,
   book: (id) => `#/book/${id}`,
   lesson: (slug) => `#/lesson/${slug}`,
