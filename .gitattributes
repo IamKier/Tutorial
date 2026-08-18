@@ -1,0 +1,50 @@
+# =============================================================================
+# .gitattributes — LINE ENDINGS, SETTLED IN THE REPOSITORY
+# =============================================================================
+#
+# Windows ends lines with CRLF, everything else with LF. Git for Windows tries
+# to paper over this with core.autocrlf=true, which converts on the way in and
+# out — but that is a setting on each developer's machine, so two people
+# checking out the same repository can end up with different files.
+#
+# This file settles it in the repository instead, where it belongs. It applies
+# to everyone who clones, whatever their local configuration says.
+#
+# The warning it stops:
+#     "LF will be replaced by CRLF the next time Git touches it"
+#
+# =============================================================================
+
+# Detect text files automatically, store them with LF in the repository, and
+# check them out with LF too.
+#
+# `eol=lf` on Windows sounds wrong and is not: every tool this project uses —
+# Node, Vite, VS Code, browsers — handles LF perfectly. The only things that
+# ever needed CRLF were old Windows programs like Notepad, and even that has
+# handled LF since 2018.
+#
+# The alternative, `text=auto` alone, leaves the working copy up to each
+# machine's autocrlf. That is how a file ends up with mixed endings, and how a
+# one-word change shows up as a diff touching every line in the file.
+* text=auto eol=lf
+
+# Files that must keep CRLF, because Windows itself requires it.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files. Marking them stops Git trying to normalise their line endings,
+# which would corrupt them, and stops it printing them as diffs.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.db binary
+*.sqlite binary
+
+# Generated. Collapsed in pull request diffs on GitHub, since nobody reviews a
+# lock file by hand.
+package-lock.json linguist-generated=true diff=none
