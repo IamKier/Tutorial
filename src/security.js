@@ -29,10 +29,17 @@ import { WRITE_RATE_LIMIT, WRITE_RATE_WINDOW_MS, TRUST_PROXY } from './config.js
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self'",
+  // The example previews carry their own <style>; see netlify.toml for the
+  // reasoning on why loosening style-src is a very different proposition from
+  // loosening script-src.
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
   "connect-src 'self'",
+  // JavaScript examples run in a Worker created from a blob.
+  'worker-src blob:',
+  // HTML examples render in a sandboxed iframe.
+  "frame-src 'self'",
   "object-src 'none'",
   // Restricts what an injected <base href> could rewrite — otherwise it can
   // redirect every relative URL on the page.

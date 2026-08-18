@@ -6,7 +6,7 @@
 // needs: an outline, a way to mark it read, and links to what comes next.
 // ============================================================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { getLesson, LESSONS, lessonIndex, TOTAL_LESSONS } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { enhance } from './enhance.js';
@@ -52,12 +52,33 @@ export function LessonPage({ slug, progress }) {
     };
   }, [slug, lesson]);
 
-  // ---- Enhance it once it is on the page ----------------------------------
-  useEffect(() => {
-    if (!html || !articleRef.current) return;
-    // This runs after React has committed the markup below, so the elements
-    // exist by the time it touches them.
-    setHeadings(enhance(articleRef.current));
+  // ---- Insert the lesson, then enhance it ---------------------------------
+  //
+  // The markup is written in here by hand rather than with
+  // dangerouslySetInnerHTML, and that is the important detail.
+  //
+  // With dangerouslySetInnerHTML, React owns this element's children. It
+  // re-applies that HTML whenever the component re-renders — and enhance()
+  // calls setHeadings, which causes exactly that. The result was that every
+  // Run button, every highlighted token and every heading id was created and
+  // then immediately wiped, with no error to show for it.
+  //
+  // Setting innerHTML ourselves on an element React renders empty means React
+  // has no children to reconcile here, so it never touches this subtree again.
+  // The rule: React owns the container, we own the contents. Pick one.
+  //
+  // useLayoutEffect rather than useEffect because this runs before the browser
+  // paints — otherwise there is a visible frame of raw, unstyled markup.
+  useLayoutEffect(() => {
+    const article = articleRef.current;
+    if (!html || !article) return;
+
+    // Safe because this content comes from files in this repository, not from
+    // anything a visitor typed. That distinction is the whole rule — never do
+    // this with input you did not write yourself.
+    article.innerHTML = html;
+
+    setHeadings(enhance(article));
   }, [html]);
 
   if (!lesson) {
@@ -108,20 +129,9 @@ export function LessonPage({ slug, progress }) {
           </div>
         )}
 
-        {/*
-          dangerouslySetInnerHTML is the right call here, despite the name.
-
-          React escapes anything you interpolate — exactly what you want for
-          user input, and exactly wrong for a lesson written as HTML, which
-          would show its tags as text.
-
-          It is safe because this content comes from files in this repository,
-          not from anything a visitor typed. That distinction is the whole
-          rule: never use it with input you did not write yourself.
-        */}
-        {html && (
-          <article className="prose" ref={articleRef} dangerouslySetInnerHTML={{ __html: html }} />
-        )}
+        {/* Rendered empty on purpose. The layout effect above fills it in and
+            then enhances it; React must not manage what is inside. */}
+        {html && <article className="prose" ref={articleRef} />}
 
         {html && (
           <button

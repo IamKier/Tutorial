@@ -137,7 +137,36 @@ test('a lesson page renders its content', { skip }, async (t) => {
   const dom = await render('http://localhost:4180/#/lesson/html-basics');
 
   assert.doesNotMatch(dom, /<div id="root"><\/div>/, 'React did not mount');
-  // Proves the fetch, the insertion and the enhancement all ran — the exact
-  // path that was broken.
-  assert.match(dom, /tok-comment|tok-keyword|prose/, 'lesson content did not load');
+  assert.match(dom, /class="prose"/, 'lesson content did not load');
+
+  // Each of these proves a separate part of enhance() survived.
+  //
+  // The loose version of this test — matching /prose/ — passed for a long time
+  // while every one of them was silently broken: React was re-applying the raw
+  // HTML and wiping the enhancement on the next render. Assert the thing you
+  // actually care about, not something that happens to appear nearby.
+  assert.match(dom, /tok-keyword|tok-comment|tok-string/, 'syntax highlighting did not survive');
+  assert.match(dom, /copy-button/, 'copy buttons did not survive');
+  assert.match(dom, /<h2 id="/, 'heading ids are missing, so the outline cannot link');
+});
+
+test('runnable examples get a Run button', { skip }, async (t) => {
+  const server = await serve(4182);
+  t.after(() => server.close());
+
+  // The HTML lesson has the most runnable blocks, so it is the clearest case.
+  const dom = await render('http://localhost:4182/#/lesson/html-basics');
+
+  assert.match(dom, /run-button/, 'no Run buttons were added');
+  assert.match(dom, /data-runnable="html"/, 'HTML examples were not detected as runnable');
+
+  // And the blocks that cannot run must NOT get one. A control that sometimes
+  // does nothing teaches readers to distrust it.
+  const shellLesson = await render('http://localhost:4182/#/lesson/node-basics');
+  const runnableCount = (shellLesson.match(/data-runnable/g) ?? []).length;
+  const blockCount = (shellLesson.match(/<pre/g) ?? []).length;
+  assert.ok(
+    runnableCount < blockCount,
+    'every block was marked runnable, including the Node and shell ones'
+  );
 });

@@ -1432,3 +1432,144 @@ kbd {
     padding: var(--space-6) 0;
   }
 }
+
+/* --- 14. RUNNABLE EXAMPLES --------------------------------------------------
+   A code block that can be run gets a bar above it and a result panel below.
+   The three sit as one unit, so the eye reads them together: controls, source,
+   result.
+   -------------------------------------------------------------------------- */
+.run-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--surface-sunken);
+}
+
+/* The language, on the left, with everything else pushed right by the margin
+   on the first button. */
+.run-bar__kind {
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.run-bar__kind + * {
+  margin-left: auto;
+}
+
+.run-button,
+.run-reset {
+  padding: 0.15rem var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.run-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.run-button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.run-reset {
+  border-color: transparent;
+  color: var(--text-faint);
+}
+
+.run-reset:hover {
+  color: var(--text);
+}
+
+/* A block with a bar above it loses its own top rounding, so the two read as
+   one object rather than two stacked ones. */
+.prose pre[data-runnable] {
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* The caret needs somewhere to sit, and an editable block should look
+   editable — but only once you are in it. Anything louder turns every example
+   into a form. */
+.prose pre[data-runnable] code {
+  display: block;
+  outline: none;
+}
+
+.prose pre[data-runnable] code:focus {
+  /* A hairline in the gutter, drawn outside the padding so it does not shift
+     the text when it appears. */
+  box-shadow: -0.75rem 0 0 -0.7rem var(--accent);
+}
+
+.run-output {
+  margin-top: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* Console output: one line per log, ruled like a printed listing. */
+.run-line {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.run-line:last-child {
+  border-bottom: none;
+}
+
+.run-line--error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.run-output--error,
+.run-output--muted {
+  padding: var(--space-3);
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.run-output--error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.run-output--muted {
+  color: var(--text-muted);
+}
+
+/* The preview frame for HTML and CSS examples. A minimum height stops it
+   collapsing to nothing when the example renders something short. */
+.run-frame {
+  display: block;
+  width: 100%;
+  min-height: 8rem;
+  border: 0;
+  background: #fbf8f1;
+}
+
+@media (max-width: 48rem) {
+  .run-bar {
+    padding: var(--space-2);
+  }
+}

@@ -52,10 +52,21 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # Only load code and styles from this origin. No CDNs, no inline scripts.
-    # 'unsafe-inline' is absent on purpose — that is the whole point of a CSP,
-    # and it is why the theme script lives in boot.js rather than inline.
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    # Only load code from this origin. No CDNs, and crucially no inline
+    # scripts — script-src has no 'unsafe-inline', which is the part of a CSP
+    # that actually stops injected script, and why the theme script lives in
+    # boot.js rather than in a <script> tag.
+    #
+    # Three deliberate allowances, each for the runnable examples:
+    #
+    #   style-src 'unsafe-inline'  the example previews carry their own <style>
+    #   worker-src blob:           JavaScript examples run in a blob Worker
+    #   frame-src 'self'           HTML examples render in a sandboxed iframe
+    #
+    # The style allowance is a real, if small, loosening: it lets injected
+    # markup restyle the page. It cannot execute anything, which is why this is
+    # a very different proposition from allowing inline script.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 
     # Never guess a file's type from its contents.
     X-Content-Type-Options = "nosniff"
