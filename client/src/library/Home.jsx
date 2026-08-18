@@ -6,7 +6,7 @@
 // few seconds: what is in here, where do I start, and where was I.
 // ============================================================================
 
-import { TOPICS, TOTAL_LESSONS, TOTAL_MINUTES, LESSONS } from '../content/catalogue.js';
+import { TOPICS, TOTAL_LESSONS, TOTAL_MINUTES, LESSONS, roman } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { Icon } from '../components/Icon.jsx';
 
@@ -57,7 +57,7 @@ export function Home({ progress }) {
           16rem and shares whatever is left over, so the column count changes
           with the window and there is not a single media query involved. */}
       <section className="shelves" aria-label="Topics">
-        {TOPICS.map((topic) => {
+        {TOPICS.map((topic, topicIndex) => {
           const readCount = progress.countIn(topic.lessons);
           const complete = readCount === topic.lessons.length;
           const minutes = topic.lessons.reduce(
@@ -71,8 +71,10 @@ export function Home({ progress }) {
               className={`shelf${complete ? ' is-complete' : ''}`}
               href={href.topic(topic.id)}
             >
-              <span className="shelf__icon">
-                <Icon name={topic.icon} />
+              {/* A chapter numeral, as a printed volume would set it. The
+                  first topic is the preface, so it gets no number. */}
+              <span className="shelf__numeral">
+                {topicIndex === 0 ? '—' : roman(topicIndex)}
               </span>
 
               <h2 className="shelf__title">{topic.title}</h2>
@@ -86,13 +88,14 @@ export function Home({ progress }) {
 
                 {readCount > 0 && (
                   <span className="shelf__badge">
-                    {complete ? <Icon name="check" /> : `${readCount}/${topic.lessons.length}`}
+                    {complete ? 'Read' : `${readCount}/${topic.lessons.length}`}
                   </span>
                 )}
               </div>
 
-              {/* A thin bar rather than a number: at a glance you want to see
-                  how far along you are, not read a fraction. */}
+              {/* A hairline along the bottom edge rather than a number: at a
+                  glance you want to see how far along you are, not read a
+                  fraction. */}
               <div className="shelf__bar">
                 <div
                   className="shelf__bar-fill"

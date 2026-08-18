@@ -1,37 +1,38 @@
 /* ==========================================================================
-   library.css — THE LIBRARY
+   library.css — THE READING ROOM
 
-   Tokens, reset and shared utilities come from theme.css, which index.html
-   links directly. This file describes the library: the header, the shelves,
-   the topic pages and the reader.
+   Tokens come from theme.css. This file arranges them into something that
+   reads like a book: a title page, a table of contents, and a text block with
+   room to breathe.
 
-   The task app's own styles live in app.css. Two files because they are two
-   different things — but both draw from the same tokens, which is why they
-   look like one product.
+   The rule running through it: separate things with a hairline rather than
+   with a shadow. Shadows imply objects floating above a surface, which is a
+   screen idea. Rules imply ink on paper, which is the one we want.
 
    Contents:
-     1. Shell and header
-     2. Home: hero and shelves
-     3. Topic page
-     4. Reader layout
-     5. Prose
-     6. Code blocks
-     7. Callouts and exercises
-     8. Outline rail
-     9. Lesson navigation
-    10. Search
-    11. Small screens
+     1. Shell and masthead
+     2. Title page
+     3. The shelves
+     4. Contents page (topic)
+     5. Reader layout
+     6. Prose
+     7. Code
+     8. Callouts and exercises
+     9. Outline rail
+    10. Lesson navigation
+    11. Search
+    12. Small screens
    ========================================================================== */
 
-/* --- 1. SHELL AND HEADER --------------------------------------------------- */
+/* --- 1. SHELL AND MASTHEAD ------------------------------------------------- */
 body {
   padding: 0;
 }
 
 .shell {
-  max-width: 78rem;
+  max-width: 76rem;
   margin: 0 auto;
-  padding: var(--space-6) var(--space-5) var(--space-7);
+  padding: var(--space-7) var(--space-6) var(--space-8);
 }
 
 .topbar {
@@ -42,47 +43,44 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) var(--space-6);
 
-  /* A translucent bar with a blur behind it, so content scrolling underneath
-     stays faintly visible. color-mix builds the transparent colour from an
-     existing token rather than hard-coding a new one. */
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(10px);
+  /* A double rule beneath the masthead — the oldest way of setting a heading
+     apart from the page. `border-bottom` plus a box-shadow line gives two
+     hairlines with a hair of paper between them. */
+  border-bottom: 1px solid var(--border-strong);
+  box-shadow: 0 3px 0 -2px var(--border);
+
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .topbar__brand {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
   color: inherit;
   text-decoration: none;
 }
 
+/* Printer's ornaments either side of the title, as a bookplate would have. */
 .topbar__mark {
-  display: grid;
-  place-items: center;
-  width: 1.875rem;
-  height: 1.875rem;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 700;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  letter-spacing: 0.1em;
 }
 
 .topbar__name {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
 }
 
 .topbar__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .topbar__search {
@@ -90,97 +88,157 @@ body {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: transparent;
   color: var(--text-muted);
-  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
   cursor: pointer;
   transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
 }
 
 .topbar__search:hover {
-  border-color: var(--border-strong);
+  border-color: var(--text-muted);
   color: var(--text);
 }
 
 .topbar__search .icon {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 .topbar__progress {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 600;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* --- 2. HOME: HERO AND SHELVES --------------------------------------------- */
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+
+.icon-button:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* Sun in light mode, moon in dark — chosen entirely by CSS. */
+.icon--moon {
+  display: none;
+}
+:root[data-theme='dark'] .icon--sun {
+  display: none;
+}
+:root[data-theme='dark'] .icon--moon {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .icon--sun {
+    display: none;
+  }
+  :root:not([data-theme='light']) .icon--moon {
+    display: block;
+  }
+}
+
+/* --- 2. TITLE PAGE --------------------------------------------------------- */
 .page {
-  max-width: 62rem;
+  max-width: 60rem;
   margin: 0 auto;
 }
 
 .hero {
-  max-width: 40rem;
-  margin: var(--space-6) 0 var(--space-7);
+  max-width: 38rem;
+  margin: var(--space-7) 0 var(--space-8);
+  text-align: center;
 }
 
 .hero__eyebrow {
-  margin: 0 0 var(--space-2);
-  color: var(--accent);
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 620;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.18em;
 }
 
 .hero__title {
   margin: 0;
-  font-size: clamp(2rem, 5vw, 2.75rem);
-  font-weight: 680;
-  /* Large text looks loose at default spacing; tightening it is what makes a
-     heading look typeset rather than typed. */
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, var(--text-3xl));
+  font-weight: 400; /* a serif at display size does not need bolding */
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+/* A short centred rule under the title, the way a title page divides itself
+   from the subtitle. Drawn with a pseudo-element so no extra markup is needed. */
+.hero__title::after {
+  content: '';
+  display: block;
+  width: 4rem;
+  height: 1px;
+  margin: var(--space-5) auto;
+  background: var(--border-strong);
 }
 
 .hero__lead {
-  margin: var(--space-4) 0 0;
+  margin: 0;
   color: var(--text-muted);
   font-size: var(--text-lg);
-  line-height: 1.6;
+  line-height: var(--leading-prose);
 }
 
 .hero__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-5);
+  justify-content: center;
+  gap: var(--space-3);
   margin-top: var(--space-5);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Separate the facts with a bullet rather than a border, so they read as one
+   line of small print rather than three boxes. */
+.hero__meta span + span::before {
+  content: '·';
+  margin-right: var(--space-3);
 }
 
 .hero__meta strong {
-  color: var(--text);
-  font-size: var(--text-lg);
-  font-weight: 660;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .hero__actions {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-5);
+  gap: var(--space-3);
+  margin-top: var(--space-6);
 }
 
 .hero__progress {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
 }
 
 .button {
@@ -188,53 +246,53 @@ body {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
-  font-weight: 580;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease),
-    transform var(--fast) var(--ease);
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
 }
 
 .button:hover {
-  border-color: var(--border-strong);
+  border-color: var(--text-muted);
   background: var(--surface-hover);
 }
 
 .button--primary {
-  border-color: transparent;
+  border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
 }
 
 .button--primary:hover {
+  border-color: var(--accent-hover);
   background: var(--accent-hover);
-}
-
-/* A 1px press. Barely visible, and its absence is what makes a button feel
-   dead when you click it. */
-.button:active {
-  transform: translateY(1px);
+  color: var(--on-accent);
 }
 
 .button .icon {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
-/* ---- The shelves --------------------------------------------------------------
-   `auto-fill` with `minmax` means the column count follows the width of the
-   window on its own. No media query decides it, so it works at every size
-   rather than at the three sizes someone thought to test.
-   ------------------------------------------------------------------------------- */
+/* --- 3. THE SHELVES --------------------------------------------------------
+   Catalogue entries rather than cards: bordered, square, flat on the page.
+   `auto-fill` with `minmax` sets the column count from the available width, so
+   there is not a single media query deciding it.
+   -------------------------------------------------------------------------- */
 .shelves {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  /* A single hairline between entries rather than a gap: the grid's own
+     background shows through 1px gaps, which draws the rules for us. */
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
 }
 
 .shelf {
@@ -242,102 +300,75 @@ body {
   display: flex;
   flex-direction: column;
   padding: var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
   background: var(--surface);
   color: inherit;
   text-decoration: none;
-  overflow: hidden;
-  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease),
-    transform var(--fast) var(--ease);
+  transition: background var(--fast) var(--ease);
 }
 
 .shelf:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  background: var(--surface-hover);
 }
 
-.shelf__icon {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  margin-bottom: var(--space-4);
-  border-radius: var(--radius);
-  background: var(--accent-soft);
+/* The roman numeral, set as a printed chapter number would be. */
+.shelf__numeral {
+  margin-bottom: var(--space-3);
   color: var(--accent);
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  letter-spacing: 0.14em;
 }
 
-.shelf.is-complete .shelf__icon {
-  background: var(--success-soft);
+.shelf.is-complete .shelf__numeral {
   color: var(--success);
 }
 
 .shelf__title {
   margin: 0;
-  font-size: var(--text-lg);
-  font-weight: 620;
-  letter-spacing: -0.01em;
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  line-height: var(--leading-tight);
 }
 
 .shelf__tagline {
   margin: var(--space-2) 0 0;
   color: var(--text-muted);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .shelf__foot {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  /* Pushes the footer to the bottom whatever the tagline's length, so a row of
-     cards lines up. */
+  /* Pushes the footer down whatever the tagline's length, so a row of entries
+     lines up along the bottom. */
   margin-top: auto;
-  padding-top: var(--space-4);
-}
-
-.shelf__count {
+  padding-top: var(--space-5);
   color: var(--text-faint);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
 }
 
 .shelf__badge {
-  display: grid;
-  place-items: center;
-  min-width: 1.5rem;
-  height: 1.5rem;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
   color: var(--accent);
-  font-size: var(--text-xs);
-  font-weight: 620;
   font-variant-numeric: tabular-nums;
 }
 
 .shelf.is-complete .shelf__badge {
-  background: var(--success);
-  color: var(--surface);
+  color: var(--success);
 }
 
-.shelf__badge .icon {
-  width: 12px;
-  height: 12px;
-  stroke-width: 3;
-}
-
-/* A hairline along the bottom edge of the card. Positioned rather than in the
-   flow, so it sits flush with the border. */
+/* A hairline progress rule along the bottom edge of the entry. */
 .shelf__bar {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 3px;
-  background: var(--surface-sunken);
+  height: 2px;
+  background: transparent;
 }
 
 .shelf__bar-fill {
@@ -352,34 +383,35 @@ body {
 
 .callout-card {
   margin-top: var(--space-7);
-  padding: var(--space-5);
+  padding: var(--space-6);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-sunken);
+  background: var(--surface);
+  text-align: center;
 }
 
 .callout-card h2 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-lg);
-  font-weight: 620;
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
 }
 
 .callout-card p {
-  margin: 0 0 var(--space-4);
-  max-width: 44rem;
+  max-width: 34rem;
+  margin: 0 auto var(--space-5);
   color: var(--text-muted);
   font-size: var(--text-sm);
-  line-height: 1.6;
 }
 
-/* --- 3. TOPIC PAGE --------------------------------------------------------- */
+/* --- 4. CONTENTS PAGE (TOPIC) ---------------------------------------------- */
 .crumbs {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
   color: var(--text-faint);
-  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
 }
 
 .crumbs a {
@@ -388,171 +420,163 @@ body {
 }
 
 .crumbs a:hover {
-  color: var(--text);
+  color: var(--accent);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
 }
 
 .crumbs .icon {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
 }
 
 .topic-head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-strong);
+  text-align: center;
 }
 
-.topic-head__icon {
-  display: grid;
-  place-items: center;
-  width: 3rem;
-  height: 3rem;
-  flex-shrink: 0;
-  border-radius: var(--radius);
-  background: var(--accent-soft);
+.topic-head__numeral {
+  display: block;
+  margin-bottom: var(--space-3);
   color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
 }
 
 .topic-head__title {
   margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 660;
-  letter-spacing: -0.02em;
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  line-height: var(--leading-tight);
 }
 
 .topic-head__tagline {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--text-muted);
+  font-size: var(--text-lg);
 }
 
 .topic-head__meta {
-  margin: var(--space-4) 0 var(--space-5);
+  margin: var(--space-4) 0 var(--space-6);
   color: var(--text-faint);
-  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .lesson-list {
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  max-width: 42rem;
 }
 
+/* A table-of-contents row: number, title, dotted leader, page reference.
+   The leader is what makes it read as a contents page rather than a menu. */
 .lesson-row {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--border);
   color: inherit;
   text-decoration: none;
-  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+  transition: color var(--fast) var(--ease);
 }
 
 .lesson-row:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
+  color: var(--accent);
 }
 
 .lesson-row__number {
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
   flex-shrink: 0;
-  border-radius: var(--radius-full);
-  background: var(--surface-sunken);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  width: 1.5rem;
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .lesson-row.is-done .lesson-row__number {
-  background: var(--success);
-  color: var(--surface);
-}
-
-.lesson-row.is-done .lesson-row__number .icon {
-  width: 12px;
-  height: 12px;
-  stroke-width: 3;
-}
-
-.lesson-row__body {
-  flex: 1;
-  min-width: 0;
+  color: var(--success);
 }
 
 .lesson-row__title {
-  display: block;
-  font-weight: 560;
+  flex-shrink: 0;
+  font-size: var(--text-lg);
 }
 
 .lesson-row.is-done .lesson-row__title {
   color: var(--text-muted);
 }
 
-.lesson-row__meta {
-  display: block;
-  margin-top: 0.1rem;
-  color: var(--text-faint);
-  font-size: var(--text-xs);
+/* The dotted leader. A flexible spacer whose only job is to draw the dots
+   between the title and the reading time. */
+.lesson-row__leader {
+  flex: 1;
+  min-width: var(--space-4);
+  height: 1px;
+  align-self: center;
+  border-bottom: 1px dotted var(--border-strong);
 }
 
-.lesson-row__arrow {
-  width: 16px;
-  height: 16px;
+.lesson-row__meta {
   flex-shrink: 0;
   color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  white-space: nowrap;
 }
 
-/* --- 4. READER LAYOUT ------------------------------------------------------ */
+/* --- 5. READER LAYOUT ------------------------------------------------------ */
 .reader {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-6);
+  gap: var(--space-7);
 }
 
-/* The outline only appears when there is genuinely room for it. Below this it
-   would squeeze the text column past comfortable reading. */
-@media (min-width: 72rem) {
+/* The outline only appears where there is genuinely room. Below this it would
+   squeeze the text column past comfortable reading. */
+@media (min-width: 74rem) {
   .reader {
-    grid-template-columns: minmax(0, 1fr) 13rem;
+    grid-template-columns: minmax(0, 1fr) 12rem;
   }
 }
 
 .reader__main {
   min-width: 0; /* lets the column shrink instead of overflowing the grid */
-  max-width: 46rem;
+  max-width: 40rem;
+  margin: 0 auto;
 }
 
 .reader__eyebrow {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
   color: var(--text-faint);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
 }
 
 .lesson-skeleton {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .lesson-skeleton__line {
   height: 1rem;
-  border-radius: 6px;
   background: var(--surface-sunken);
-  animation: pulse 1.4s ease-in-out infinite;
+  animation: pulse 1.6s ease-in-out infinite;
 }
 
 .lesson-skeleton__line--title {
@@ -570,72 +594,75 @@ body {
     opacity: 1;
   }
   50% {
-    opacity: 0.45;
+    opacity: 0.4;
   }
 }
 
-/* --- 5. PROSE --------------------------------------------------------------
-   Everything is scoped under .prose so these generous defaults apply to lesson
-   content only and cannot leak into the shelves or the header.
+/* --- 6. PROSE --------------------------------------------------------------
+   Everything is scoped under .prose so these settings apply to lesson text
+   only and cannot leak into the shelves or the masthead.
    -------------------------------------------------------------------------- */
 .prose {
-  /* Around 70 characters a line. Longer and the eye loses its place coming
-     back for the next one — the single easiest thing you can do for
-     readability. */
-  max-width: 46rem;
+  /* Around 68 characters a line. Longer and the eye loses its place on the
+     return — the single most effective thing you can do for readability. */
+  max-width: 40rem;
+  font-size: var(--text-base);
+  line-height: var(--leading-prose);
   animation: lesson-in var(--slow) var(--ease);
 }
 
 @keyframes lesson-in {
   from {
     opacity: 0;
-    transform: translateY(0.4rem);
   }
 }
 
 .prose > * + * {
-  /* Space between siblings, with no stray margin above the first element or
-     below the last. Spacing between things rather than around them is far
-     easier to keep consistent. */
+  /* Space between siblings, with no stray margin above the first or below the
+     last. Spacing between things is far easier to keep consistent than spacing
+     around them. */
   margin-top: var(--space-4);
 }
 
 .prose h1 {
   margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 660;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
 }
 
 .prose h2 {
   margin-top: var(--space-7);
-  padding-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--border);
+  font-family: var(--font-serif);
   font-size: var(--text-xl);
-  font-weight: 620;
-  letter-spacing: -0.01em;
-  /* Stops a heading landing flush against the top of the window when you jump
-     to it from the outline. */
-  scroll-margin-top: 5rem;
+  font-weight: 600;
+  /* Stops a heading landing flush against the masthead when you jump to it
+     from the outline. */
+  scroll-margin-top: 6rem;
 }
 
 .prose h3 {
   margin-top: var(--space-5);
+  font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: 600;
-  scroll-margin-top: 5rem;
+  scroll-margin-top: 6rem;
 }
 
-.prose p,
-.prose li {
-  color: var(--text);
+.prose p {
+  margin: 0;
 }
 
+/* The standfirst under a lesson title, set larger and lighter — as a magazine
+   or a textbook sets its opening paragraph. */
 .prose .lead {
   color: var(--text-muted);
   font-size: var(--text-lg);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .prose ul,
@@ -651,84 +678,98 @@ body {
   color: var(--text-faint);
 }
 
+/* Links as they are set in print: coloured, with a rule beneath that sits
+   clear of the descenders rather than striking through them. */
 .prose a {
   color: var(--accent);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: text-decoration-color var(--fast) var(--ease);
+}
+
+.prose a:hover {
+  text-decoration-color: var(--accent);
 }
 
 .prose strong {
-  font-weight: 620;
+  font-weight: 600;
 }
 
-/* Inline code — deliberately subtle, so a sentence with three of them in it is
-   still readable. */
+/* Inline code. A serif paragraph with monospace inside it needs the monospace
+   scaled down, or it sits noticeably larger than the text around it. */
 .prose :not(pre) > code {
-  padding: 0.1em 0.35em;
-  border-radius: 5px;
+  padding: 0.1em 0.3em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   background: var(--surface-sunken);
   font-family: var(--font-mono);
-  font-size: 0.875em; /* em, so it tracks the surrounding text size */
+  font-size: 0.85em;
   overflow-wrap: anywhere;
 }
 
 .prose table {
   width: 100%;
-  border-collapse: collapse; /* one shared border instead of double lines */
+  border-collapse: collapse; /* one shared rule instead of double lines */
   font-size: var(--text-sm);
 }
 
 .prose th,
 .prose td {
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 
-.prose th {
+/* A heavier rule under the header row, as a printed table has. */
+.prose thead th {
+  border-bottom: 1px solid var(--border-strong);
   color: var(--text-muted);
-  font-weight: 580;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
-.prose tbody tr:hover {
-  background: var(--surface-hover);
-}
-
-/* Tables are the usual cause of horizontal page scroll. A scroll container
-   keeps the overflow inside the table instead of pushing the page sideways. */
-.table-scroll {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.table-scroll tr:last-child td {
+.prose tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* Tables are the usual cause of horizontal page scroll. A scroll container
+   keeps the overflow inside the table rather than pushing the page sideways. */
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
 .prose hr {
-  margin: var(--space-6) 0;
+  margin: var(--space-7) auto;
+  width: 4rem;
   border: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-strong);
 }
 
 .tag {
   display: inline-block;
   vertical-align: middle;
-  margin-left: var(--space-2);
-  padding: 0.15rem var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--surface-sunken);
+  margin-left: var(--space-3);
+  padding: 0.1rem var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 560;
-  letter-spacing: 0;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .tag--intermediate {
-  background: var(--warning-soft);
+  border-color: var(--warning);
   color: var(--warning);
 }
 
@@ -736,24 +777,24 @@ kbd {
   padding: 0.1rem 0.35rem;
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   font-family: var(--font-mono);
-  font-size: 0.8125em;
+  font-size: 0.8em;
   white-space: nowrap;
 }
 
-/* --- 6. CODE BLOCKS -------------------------------------------------------- */
+/* --- 7. CODE --------------------------------------------------------------- */
 .prose pre {
   position: relative;
   margin: 0;
-  padding: var(--space-4);
-  border-radius: var(--radius);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-sm);
   background: var(--code-bg);
   color: var(--code-text);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  line-height: 1.65;
+  line-height: 1.6;
 
   /* Long lines scroll inside the block rather than stretching the page. */
   overflow-x: auto;
@@ -763,7 +804,6 @@ kbd {
   font: inherit;
 }
 
-/* The token colours the highlighter applies. */
 .tok-comment {
   color: var(--code-comment);
   font-style: italic;
@@ -782,11 +822,12 @@ kbd {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid rgb(255 255 255 / 0.14);
-  border-radius: 6px;
-  background: rgb(255 255 255 / 0.08);
+  padding: 0.15rem var(--space-2);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 0.06);
   color: var(--code-text);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
   cursor: pointer;
 
@@ -801,25 +842,23 @@ kbd {
 }
 
 .copy-button:hover {
-  background: rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.16);
 }
 
 .copy-button.is-copied {
   border-color: transparent;
   background: var(--success);
-  color: #fff;
+  color: var(--surface);
 }
 
-/* --- 7. CALLOUTS AND EXERCISES ---------------------------------------------
-   The coloured left edge is what makes these scannable when you are skimming
-   for the warning you half remember.
+/* --- 8. CALLOUTS AND EXERCISES ---------------------------------------------
+   Marginal notes rather than coloured boxes: a rule down the left edge, the
+   way an annotated edition marks a remark.
    -------------------------------------------------------------------------- */
 .callout {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--text-faint);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: var(--space-1) 0 var(--space-1) var(--space-5);
+  border-left: 2px solid var(--border-strong);
+  background: none;
   font-size: var(--text-sm);
 }
 
@@ -829,12 +868,17 @@ kbd {
 
 .callout p {
   margin: 0;
+  color: var(--text-muted);
 }
 
 .callout__title {
   display: block;
   margin-bottom: var(--space-1);
-  font-weight: 620;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .callout--note {
@@ -846,7 +890,6 @@ kbd {
 
 .callout--warn {
   border-left-color: var(--danger);
-  background: var(--danger-soft);
 }
 .callout--warn .callout__title {
   color: var(--danger);
@@ -854,18 +897,15 @@ kbd {
 
 .callout--tip {
   border-left-color: var(--success);
-  background: var(--success-soft);
 }
 .callout--tip .callout__title {
   color: var(--success);
 }
 
 .exercise {
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
 }
 
 .exercise > * + * {
@@ -874,26 +914,25 @@ kbd {
 
 .exercise__head {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
 }
 
 .exercise__number {
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  background: var(--accent-soft);
   color: var(--accent);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 660;
+  font-weight: 600;
+  letter-spacing: 0.1em;
 }
 
 .exercise__title {
   margin: 0;
-  font-size: var(--text-base);
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
@@ -906,9 +945,9 @@ kbd {
   margin: 0;
 }
 
-/* <details> is a built-in collapsible section — no JavaScript required. The
-   browser handles the state, the keyboard support and the screen reader
-   announcement. Reach for it before writing an accordion. */
+/* <details> is a built-in collapsible section — the browser handles the state,
+   the keyboard and the screen reader announcement. Reach for it before
+   building an accordion. */
 .exercise details {
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);
@@ -916,8 +955,8 @@ kbd {
 
 .exercise summary {
   color: var(--accent);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
-  font-weight: 560;
   cursor: pointer;
   list-style: none; /* hides the default triangle */
 }
@@ -929,7 +968,7 @@ kbd {
 .exercise summary::before {
   content: '▸';
   display: inline-block;
-  width: 1em;
+  width: 1.2em;
   color: var(--text-faint);
 }
 
@@ -941,36 +980,36 @@ kbd {
   margin-top: var(--space-3);
 }
 
-/* --- 8. OUTLINE RAIL ------------------------------------------------------- */
+/* --- 9. OUTLINE RAIL ------------------------------------------------------- */
 .outline {
   position: sticky;
-  top: 5rem;
+  top: 6rem;
   align-self: start; /* stops the grid stretching it to full height */
-  max-height: calc(100vh - 7rem);
+  max-height: calc(100vh - 8rem);
   overflow-y: auto;
 }
 
 .outline__title {
   margin: 0 0 var(--space-3);
   color: var(--text-faint);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 620;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
 }
 
 .outline__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  /* A hairline for the active marker to register against. */
   border-left: 1px solid var(--border);
 }
 
 .outline__link {
   display: block;
-  padding: var(--space-1) var(--space-3);
-  margin-left: -1px; /* overlap the list's border */
+  padding: var(--space-2) var(--space-3);
+  margin-left: -1px; /* overlap the list's rule */
   border-left: 2px solid transparent;
   color: var(--text-muted);
   font-size: var(--text-sm);
@@ -988,28 +1027,28 @@ kbd {
   color: var(--accent);
 }
 
-/* --- 9. LESSON NAVIGATION -------------------------------------------------- */
+/* --- 10. LESSON NAVIGATION -------------------------------------------------- */
 .done-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  margin-top: var(--space-6);
+  margin-top: var(--space-7);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text-muted);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
-  font-weight: 560;
   cursor: pointer;
   transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease),
     background var(--fast) var(--ease);
 }
 
 .done-toggle:hover {
-  border-color: var(--border-strong);
+  border-color: var(--text-muted);
   color: var(--text);
 }
 
@@ -1021,8 +1060,10 @@ kbd {
 
 .lesson-nav {
   display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
 }
 
 .lesson-nav__link {
@@ -1031,27 +1072,24 @@ kbd {
   gap: var(--space-3);
   flex: 1;
   min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
   color: var(--text);
   text-decoration: none;
-  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+  transition: color var(--fast) var(--ease);
 }
 
 .lesson-nav__link:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
+  color: var(--accent);
 }
 
 .lesson-nav__link .icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   color: var(--text-faint);
 }
 
 /* `margin-left: auto` pushes Next to the right edge even when there is no
-   Previous card beside it — neater than an empty spacer. */
+   Previous beside it — neater than an empty spacer. */
 .lesson-nav__link--next {
   margin-left: auto;
   justify-content: flex-end;
@@ -1065,15 +1103,18 @@ kbd {
 .lesson-nav__label {
   display: block;
   color: var(--text-faint);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .lesson-nav__title {
   display: block;
-  font-weight: 560;
+  font-size: var(--text-base);
 }
 
-/* --- 10. SEARCH ------------------------------------------------------------ */
+/* --- 11. SEARCH ------------------------------------------------------------- */
 .search-overlay {
   position: fixed;
   inset: 0; /* shorthand for top/right/bottom/left: 0 */
@@ -1082,8 +1123,8 @@ kbd {
   /* `start` rather than `center`: a dialog that grows downward from a fixed
      point is far less jarring than one that recentres on every keystroke. */
   place-items: start center;
-  padding: 10vh var(--space-4) var(--space-4);
-  background: rgb(0 0 0 / 0.45);
+  padding: 12vh var(--space-4) var(--space-4);
+  background: color-mix(in srgb, var(--text) 40%, transparent);
   animation: fade-in var(--fast) var(--ease);
 }
 
@@ -1095,12 +1136,10 @@ kbd {
 
 .search-panel {
   width: 100%;
-  max-width: 34rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  max-width: 32rem;
+  border: 1px solid var(--border-strong);
   background: var(--surface);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
 }
 
 .search-field {
@@ -1117,6 +1156,7 @@ kbd {
   min-width: 0;
   border: none;
   background: none;
+  font-family: var(--font-serif);
   font-size: var(--text-lg);
 }
 
@@ -1129,16 +1169,16 @@ kbd {
 }
 
 .search-results {
-  max-height: 24rem;
+  max-height: 22rem;
   overflow-y: auto;
-  /* Stops a scroll gesture that reaches the end of the list from carrying on
-     and scrolling the page behind the dialog. */
+  /* Stops a scroll gesture that reaches the end of the list carrying on and
+     scrolling the page behind the dialog. */
   overscroll-behavior: contain;
 }
 
 .search-hint {
   margin: 0;
-  padding: var(--space-5);
+  padding: var(--space-6);
   color: var(--text-faint);
   font-size: var(--text-sm);
   text-align: center;
@@ -1163,34 +1203,35 @@ kbd {
 .search-result__topic {
   display: block;
   color: var(--accent);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .search-result__title {
   display: block;
-  margin-top: 0.1rem;
-  font-weight: 560;
+  margin-top: 0.15rem;
+  font-size: var(--text-base);
 }
 
 .search-result__preview {
-  display: block;
+  display: -webkit-box;
   margin-top: 0.2rem;
   color: var(--text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.5;
-  /* Clamp to two lines. -webkit- prefixed and yet supported everywhere; this
-     is the one property where the prefix is still the standard spelling. */
-  display: -webkit-box;
+  /* Clamp to two lines. Still the -webkit- spelling everywhere, and still the
+     standard one. */
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* --- 11. SMALL SCREENS ----------------------------------------------------- */
+/* --- 12. SMALL SCREENS ------------------------------------------------------ */
 @media (max-width: 48rem) {
   .shell {
-    padding: var(--space-5) var(--space-4) var(--space-6);
+    padding: var(--space-5) var(--space-4) var(--space-7);
   }
 
   .topbar {
@@ -1204,11 +1245,32 @@ kbd {
   }
 
   .topbar__name {
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
+  }
+
+  /* One column, so the shelf grid becomes a simple stack of entries. */
+  .shelves {
+    grid-template-columns: 1fr;
+  }
+
+  /* A contents row wraps rather than crushing the title, and the leader has
+     nothing left to lead to, so it goes. */
+  .lesson-row__leader {
+    display: none;
+  }
+
+  .lesson-row {
+    flex-wrap: wrap;
+  }
+
+  .lesson-row__meta {
+    width: 100%;
+    padding-left: calc(1.5rem + var(--space-3));
   }
 
   .lesson-nav {
     flex-direction: column;
+    gap: var(--space-4);
   }
 
   .lesson-nav__link--next {

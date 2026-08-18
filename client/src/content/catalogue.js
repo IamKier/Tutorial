@@ -158,3 +158,29 @@ export function getTopic(id) {
 export function lessonIndex(slug) {
   return LESSONS.findIndex((lesson) => lesson.slug === slug);
 }
+
+/**
+ * 1 -> "I", 4 -> "IV", 9 -> "IX".
+ *
+ * Used for the topic numerals on the shelves. Written out rather than pulled
+ * from a package: it is nine lines, and a dependency for this would be a
+ * dependency to audit, update and eventually remove.
+ */
+export function roman(n) {
+  const table = [
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+
+  let out = '';
+  for (const [value, numeral] of table) {
+    while (n >= value) {
+      out += numeral;
+      n -= value;
+    }
+  }
+  return out;
+}
