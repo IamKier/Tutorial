@@ -26,7 +26,9 @@
 
 /* --- 1. SHELL AND MASTHEAD ------------------------------------------------- */
 body {
-  padding: 0;
+  /* Clears the fixed masthead. On body rather than on .shell so every page —
+     the cover included — is offset by exactly the same amount. */
+  padding: var(--topbar-h) 0 0;
 }
 
 .shell {
@@ -36,14 +38,23 @@ body {
 }
 
 .topbar {
-  position: sticky;
+  /* Fixed, not sticky. Sticky keeps its place in the flow and can be pushed
+     off by an ancestor with overflow; fixed is pinned to the viewport and
+     cannot be. The cost is that it no longer occupies space, so body carries
+     a matching padding-top below. */
+  position: fixed;
   top: 0;
-  z-index: 30;
+  left: 0;
+  right: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-6);
+  /* An explicit height rather than one that emerges from the padding, so the
+     token above is the single source of truth. */
+  height: var(--topbar-h);
+  padding: 0 var(--space-6);
 
   /* A double rule beneath the masthead — the oldest way of setting a heading
      apart from the page. `border-bottom` plus a box-shadow line gives two
@@ -151,6 +162,15 @@ body {
   :root:not([data-theme='light']) .icon--moon {
     display: block;
   }
+}
+
+/* The cover manages its own vertical space, so the shell must not add any.
+   :has() lets the parent respond to which page it is holding, which is the
+   one thing CSS could never do until recently — the alternative is a class
+   toggled from JavaScript, and this needs no JavaScript at all. */
+.shell:has(.cover) {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 /* --- 2. TITLE PAGE --------------------------------------------------------- */
@@ -642,7 +662,7 @@ body {
   font-weight: 600;
   /* Stops a heading landing flush against the masthead when you jump to it
      from the outline. */
-  scroll-margin-top: 6rem;
+  scroll-margin-top: calc(var(--topbar-h) + var(--space-4));
 }
 
 .prose h3 {
@@ -650,7 +670,7 @@ body {
   font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: 600;
-  scroll-margin-top: 6rem;
+  scroll-margin-top: calc(var(--topbar-h) + var(--space-4));
 }
 
 .prose p {
@@ -983,9 +1003,9 @@ kbd {
 /* --- 9. OUTLINE RAIL ------------------------------------------------------- */
 .outline {
   position: sticky;
-  top: 6rem;
+  top: calc(var(--topbar-h) + var(--space-5));
   align-self: start; /* stops the grid stretching it to full height */
-  max-height: calc(100vh - 8rem);
+  max-height: calc(100vh - var(--topbar-h) - var(--space-7));
   overflow-y: auto;
 }
 
@@ -1292,8 +1312,19 @@ kbd {
   align-items: center;
   /* Minus the masthead, so the page does not scroll by a sliver on load —
      that stray scrollbar is the usual giveaway of a hand-built hero. */
-  min-height: calc(100vh - 5rem);
-  padding: var(--space-7) var(--space-4);
+  /* Exactly the space left over: the viewport, less the masthead, less the
+     padding .shell puts above and below. Getting this wrong by even a few
+     pixels puts a scrollbar on a page that has nothing to scroll.
+     100dvh rather than 100vh so a phone's collapsing address bar is counted. */
+  /* Just the viewport less the masthead. The shell's own vertical padding is
+     removed for this page by the rule below, so the cover is the only thing
+     deciding its height — two things both adding space is how a page that
+     should exactly fill the window ends up scrolling by twenty pixels. */
+  min-height: calc(100dvh - var(--topbar-h));
+  /* No vertical padding: the plate inside already has its own, and two lots of
+     breathing room is what tips a page that should exactly fill the window
+     into scrolling. */
+  padding: 0 var(--space-4);
   text-align: center;
 }
 
@@ -1301,7 +1332,7 @@ kbd {
    title page frames its type. */
 .cover__plate {
   max-width: 34rem;
-  padding: var(--space-7) 0;
+  padding: var(--space-6) 0;
   border-top: 1px solid var(--border-strong);
   border-bottom: 1px solid var(--border-strong);
 }
@@ -1323,7 +1354,7 @@ kbd {
   font-family: var(--font-serif);
   /* clamp scales the title with the window between two limits, so it is large
      on a desktop and still fits a phone — with no media query. */
-  font-size: clamp(2.5rem, 9vw, 4.5rem);
+  font-size: clamp(2.25rem, 7vw, 3.75rem);
   font-weight: 400;
   line-height: 1.05;
   letter-spacing: -0.02em;
@@ -1336,7 +1367,7 @@ kbd {
 }
 
 .cover__ornament {
-  margin: var(--space-5) 0;
+  margin: var(--space-4) 0;
   color: var(--accent);
   font-size: var(--text-xl);
   line-height: 1;
@@ -1358,7 +1389,7 @@ kbd {
   display: flex;
   justify-content: center;
   gap: var(--space-7);
-  margin: var(--space-6) 0 0;
+  margin: var(--space-5) 0 0;
 }
 
 .cover__details dt {
@@ -1380,7 +1411,7 @@ kbd {
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
 
 .cover__secondary {
@@ -1406,7 +1437,7 @@ kbd {
 
 .cover__colophon {
   max-width: 30rem;
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
 
 .cover__colophon p {

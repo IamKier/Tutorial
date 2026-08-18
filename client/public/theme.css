@@ -73,6 +73,13 @@
   --radius-lg: 4px;
   --radius-full: 999px;
 
+  /* The fixed masthead's height. Declared rather than measured, because four
+     other things need to know it: the page's top padding, the cover's height,
+     where a heading stops when you jump to it, and where the outline rail
+     sticks. A guessed value here leaves a stray scrollbar on the cover — which
+     is exactly what happened before this existed. */
+  --topbar-h: 3.75rem;
+
   /* Motion, kept restrained. A reading room should not be busy. */
   --ease: cubic-bezier(0.2, 0, 0.2, 1);
   --fast: 120ms;
