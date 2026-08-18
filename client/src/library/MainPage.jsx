@@ -4,13 +4,15 @@
 //
 // What you see on walking in. It answers, in this order:
 //
-//   Where was I?          — the desk, with the chapter you stopped at
-//   How far have I got?   — the ledger
-//   What is here?         — the subjects, and what stands on each shelf
+//   Where was I?          the desk, with the chapter you stopped at
+//   What is next?         the two after it, so the path is visible
+//   How far have I got?   the ledger
+//   What is here?         the subjects, previewed as their shelves
 //
-// That order is deliberate. A returning reader wants the first of those and
-// nothing else; a new one falls through to the third, which is where the
-// library actually begins.
+// A returning reader wants the first and nothing else, so it comes first and
+// is the largest thing on the page. A new reader falls through to the last,
+// which is where the library actually begins — and the desk and ledger are
+// simply absent until there is something to put in them.
 // ============================================================================
 
 import {
@@ -20,28 +22,34 @@ import {
   TOTAL_CHAPTERS,
   TOTAL_BOOKS,
   TOTAL_MINUTES,
+  getBook,
   bookMinutes,
+  hash,
 } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { Icon } from '../components/Icon.jsx';
 
 export function MainPage({ progress }) {
-  const next = CHAPTERS.find((chapter) => !progress.isDone(chapter.slug));
+  const unread = CHAPTERS.filter((chapter) => !progress.isDone(chapter.slug));
+  const next = unread[0];
+  const upNext = unread.slice(1, 4);
+
   const started = progress.total > 0;
   const finished = !next;
 
-  // A book counts as "in progress" only if it is begun and unfinished —
-  // which is the set worth showing someone who wants to pick up where they
-  // stopped.
-  const inProgress = BOOKS.filter((book) => {
+  const minutesLeft = unread.reduce((sum, chapter) => sum + chapter.minutes, 0);
+  const hoursLeft = Math.max(1, Math.round(minutesLeft / 60));
+
+  const volumesDone = BOOKS.filter(
+    (book) => progress.countIn(book.chapters) === book.chapters.length
+  ).length;
+
+  const alsoReading = BOOKS.filter((book) => {
     const read = progress.countIn(book.chapters);
-    return read > 0 && read < book.chapters.length;
+    return read > 0 && read < book.chapters.length && book.id !== next?.bookId;
   });
 
-  const minutesLeft = CHAPTERS.filter((c) => !progress.isDone(c.slug)).reduce(
-    (sum, c) => sum + c.minutes,
-    0
-  );
+  const nextBook = next ? getBook(next.bookId) : null;
 
   return (
     <div className="page">
@@ -52,93 +60,122 @@ export function MainPage({ progress }) {
         </h1>
         <p className="main-head__lead">
           {finished
-            ? 'All eighteen chapters are behind you. The shelves stay open — a second reading of the harder volumes is rarely wasted.'
+            ? 'All twenty-seven chapters are behind you. The shelves stay open — a second reading of the harder volumes is rarely wasted.'
             : started
-              ? `About ${Math.round(minutesLeft / 60) || 1} hour${Math.round(minutesLeft / 60) === 1 ? '' : 's'} of reading left across ${CHAPTERS.length - progress.total} chapters.`
-              : 'Nine volumes on web development, written to be read in order. Start at the beginning or take whichever one you need.'}
+              ? `About ${hoursLeft} ${hoursLeft === 1 ? 'hour' : 'hours'} of reading left, across ${unread.length} chapters.`
+              : 'Thirteen volumes on web development, from the structure of a page to the practices around shipping it. Start at the beginning, or take whichever one you need.'}
         </p>
       </header>
 
-      {/* ---- The desk: where you left off ---------------------------------- */}
+      {/* ---- Desk and ledger, side by side on a wide screen ---------------- */}
       {!finished && (
-        <section className="desk" aria-label="Continue reading">
-          <div className="desk__label">
-            <Icon name="bookmark" />
-            {started ? 'You were reading' : 'Begin here'}
-          </div>
-
-          <a className="desk__card" href={href.lesson(next.slug)}>
-            <span className="desk__book">{next.bookTitle}</span>
-            <span className="desk__chapter">{next.title}</span>
-            <span className="desk__meta">
-              {next.level} · {next.minutes} min read
-            </span>
-          </a>
-
-          {/* Other books left half-finished. Only worth showing if there are
-              any, and only the ones that are not the book above. */}
-          {inProgress.filter((b) => b.id !== next.bookId).length > 0 && (
-            <div className="desk__also">
-              <span className="desk__also-label">Also part-read</span>
-              {inProgress
-                .filter((b) => b.id !== next.bookId)
-                .map((book) => (
-                  <a key={book.id} className="desk__also-link" href={href.book(book.id)}>
-                    <span className="desk__also-spine" style={{ background: book.spine }} />
-                    {book.title}
-                    <span className="desk__also-count">
-                      {progress.countIn(book.chapters)}/{book.chapters.length}
-                    </span>
-                  </a>
-                ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ---- The ledger: progress at a glance ------------------------------ */}
-      {started && (
-        <section className="ledger" aria-label="Your progress">
-          <dl className="ledger__figures">
-            <div>
-              <dt>Chapters read</dt>
-              <dd>
-                {progress.total} <span>of {TOTAL_CHAPTERS}</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Volumes finished</dt>
-              <dd>
-                {BOOKS.filter((b) => progress.countIn(b.chapters) === b.chapters.length).length}{' '}
-                <span>of {TOTAL_BOOKS}</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Reading left</dt>
-              <dd>
-                {minutesLeft} <span>min</span>
-              </dd>
-            </div>
-          </dl>
-
-          <div
-            className="ledger__bar"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress.percent}
-            aria-label="Chapters read"
+        <div className="front">
+          <section
+            className="desk"
+            aria-label="Continue reading"
+            // The book's own colour, carried through from the shelf so the
+            // card is recognisably the volume you left open.
+            style={{ '--spine': nextBook?.spine }}
           >
-            <div className="ledger__fill" style={{ width: `${progress.percent}%` }} />
-          </div>
-        </section>
+            <p className="desk__label">
+              <Icon name="bookmark" />
+              {started ? 'You were reading' : 'Begin here'}
+            </p>
+
+            <a className="desk__card" href={href.lesson(next.slug)}>
+              <span className="desk__book">{next.bookTitle}</span>
+              <span className="desk__chapter">{next.title}</span>
+              <span className="desk__meta">
+                {next.level} · {next.minutes} min read
+              </span>
+              <span className="desk__go">
+                Continue
+                <Icon name="arrowRight" />
+              </span>
+            </a>
+
+            {upNext.length > 0 && (
+              <div className="desk__queue">
+                <p className="desk__queue-label">Then</p>
+                <ol className="desk__queue-list">
+                  {upNext.map((chapter) => (
+                    <li key={chapter.slug}>
+                      <a href={href.lesson(chapter.slug)}>
+                        <span className="desk__queue-title">{chapter.title}</span>
+                        <span className="desk__queue-meta">
+                          {chapter.bookTitle} · {chapter.minutes} min
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </section>
+
+          {started && (
+            <aside className="ledger" aria-label="Your progress">
+              <p className="ledger__label">Progress</p>
+
+              <dl className="ledger__figures">
+                <div>
+                  <dt>Chapters</dt>
+                  <dd>
+                    {progress.total} <span>of {TOTAL_CHAPTERS}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Volumes</dt>
+                  <dd>
+                    {volumesDone} <span>of {TOTAL_BOOKS}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Left to read</dt>
+                  <dd>
+                    {minutesLeft} <span>min</span>
+                  </dd>
+                </div>
+              </dl>
+
+              <div
+                className="ledger__bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress.percent}
+                aria-label="Chapters read"
+              >
+                <div className="ledger__fill" style={{ width: `${progress.percent}%` }} />
+              </div>
+              <p className="ledger__percent">{progress.percent}% read</p>
+
+              {alsoReading.length > 0 && (
+                <div className="ledger__also">
+                  <p className="ledger__also-label">Also part-read</p>
+                  {alsoReading.map((book) => (
+                    <a key={book.id} className="ledger__also-link" href={href.book(book.id)}>
+                      <span
+                        className="ledger__also-spine"
+                        style={{ background: book.spine }}
+                        aria-hidden="true"
+                      />
+                      {book.title}
+                      <span className="ledger__also-count">
+                        {progress.countIn(book.chapters)}/{book.chapters.length}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
       )}
 
-      {/* ---- The subjects -------------------------------------------------- */}
+      {/* ---- The subjects --------------------------------------------------- */}
       <section aria-label="Subjects">
-        <h2 className="main-section__title">
-          {SUBJECTS.length === 1 ? 'On the shelves' : 'Subjects'}
-        </h2>
+        <h2 className="main-section__title">On the shelves</h2>
 
         <ul className="subject-list">
           {SUBJECTS.map((subject) => {
@@ -149,27 +186,46 @@ export function MainPage({ progress }) {
             return (
               <li key={subject.id}>
                 <a className="subject-card" href={href.subject(subject.id)}>
-                  {/* The spines of the volumes inside, as a preview of the
-                      shelf. Decorative — the titles are all one click away —
-                      so it is hidden from screen readers. */}
-                  <span className="subject-card__spines" aria-hidden="true">
-                    {subject.books.map((book) => (
-                      <span
-                        key={book.id}
-                        className="subject-card__spine"
-                        style={{ background: book.spine }}
-                      />
-                    ))}
+                  {/* A miniature of the actual shelf: same colours, same
+                      thickness-from-chapter-count, same height variation. It
+                      is a preview of a real thing rather than a decoration
+                      that happens to be near it. */}
+                  <span className="subject-card__shelf" aria-hidden="true">
+                    <span className="subject-card__spines">
+                      {subject.books.map((book) => (
+                        <span
+                          key={book.id}
+                          className="subject-card__spine"
+                          style={{
+                            background: book.spine,
+                            height: `${72 + hash(book.title) * 28}%`,
+                            width: `${Math.min(11, 5 + book.chapters.length * 1.6)}px`,
+                          }}
+                        />
+                      ))}
+                    </span>
+                    <span className="subject-card__board" />
                   </span>
 
                   <span className="subject-card__body">
                     <span className="subject-card__title">{subject.title}</span>
                     <span className="subject-card__tagline">{subject.tagline}</span>
-                    <span className="subject-card__note">{subject.note}</span>
 
                     <span className="subject-card__meta">
-                      {subject.books.length} volumes · {chapters.length} chapters · {minutes} min
-                      {read > 0 && ` · ${read} read`}
+                      <span>
+                        <strong>{subject.books.length}</strong> volumes
+                      </span>
+                      <span>
+                        <strong>{chapters.length}</strong> chapters
+                      </span>
+                      <span>
+                        <strong>{Math.round(minutes / 60)}</strong> hours
+                      </span>
+                      {read > 0 && (
+                        <span className="subject-card__read">
+                          <strong>{read}</strong> read
+                        </span>
+                      )}
                     </span>
                   </span>
 

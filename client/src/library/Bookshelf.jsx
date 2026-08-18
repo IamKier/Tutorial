@@ -21,36 +21,9 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { bookMinutes, roman } from '../content/catalogue.js';
+import { bookMinutes, roman, hash } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { Icon } from '../components/Icon.jsx';
-
-/**
- * A stable number between 0 and 1 for a string.
- *
- * Math.random() would give a different shelf on every render — books changing
- * height as you looked at them. Deriving it from the title means the shelf is
- * arranged the same way every visit.
- *
- * This is FNV-1a. The obvious `h = h * 31 + charCode` version was tried first
- * and clustered badly on short, similar titles: nine books came out within
- * five percent of each other, which is exactly the even row the variation
- * exists to avoid. Multiplying by a large prime and mixing with XOR spreads
- * short strings far better.
- *
- * Math.imul does 32-bit integer multiplication. Plain `*` would overflow into
- * a float here and throw away the low bits that carry the mixing.
- */
-function hash(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  // >>> 0 reinterprets the result as unsigned; without it half the hashes are
-  // negative and the modulo gives a negative fraction.
-  return ((h >>> 0) % 1000) / 1000;
-}
 
 function BookSpine({ book, index, progress }) {
   const read = progress.countIn(book.chapters);

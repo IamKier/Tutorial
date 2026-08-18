@@ -287,6 +287,30 @@ export function bookMinutes(book) {
 }
 
 /**
+ * A stable number between 0 and 1 for a string.
+ *
+ * Used for the height of a book on the shelf, and for the same book's sliver
+ * in the main page's preview — so the two agree. Deriving it from the title
+ * rather than from Math.random() means the shelf is arranged identically every
+ * visit.
+ *
+ * FNV-1a. The obvious `h * 31 + charCode` version clustered badly on short,
+ * similar titles: thirteen books came out within a few percent of each other,
+ * which is the even row the variation exists to avoid.
+ */
+export function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    // Math.imul is 32-bit integer multiplication; plain * overflows to a float
+    // and throws away the low bits that carry the mixing.
+    h = Math.imul(h, 16777619);
+  }
+  // >>> 0 reinterprets as unsigned, or half the hashes come out negative.
+  return ((h >>> 0) % 1000) / 1000;
+}
+
+/**
  * 1 -> "I", 4 -> "IV", 9 -> "IX".
  *
  * For the volume numbers on the shelves. Written out rather than pulled from a
