@@ -1,0 +1,91 @@
+# =============================================================================
+# netlify.toml — HOW NETLIFY SHOULD BUILD THIS
+# =============================================================================
+#
+# Without this file Netlify has to guess, and it guesses that the repository
+# root is the website. The root has no index.html — the page you are looking
+# for is generated into dist/ by Vite — so you get a blank page with no error
+# to explain it.
+#
+# The library is entirely static: HTML, CSS, one JavaScript bundle and fifteen
+# lesson files. Nothing on the reading side calls a server, which is why it can
+# live on a static host at all.
+#
+# The one exception is the task app at #/demo. It needs the Node backend, which
+# Netlify cannot run, so that route detects the missing API and says so rather
+# than failing silently. Run the project locally to use it.
+# =============================================================================
+
+[build]
+  # Vite compiles client/ into dist/. Netlify runs this, then serves what it
+  # produced.
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Netlify's default Node is older than this project's. package.json declares
+  # node >=24; if these disagree the install fails with an engine error that
+  # reads as though your dependencies are broken.
+  NODE_VERSION = "24"
+
+# -----------------------------------------------------------------------------
+# Routing
+#
+# The router uses the hash (#/lesson/css-basics), and a hash is never sent to
+# the server — so every route is really a request for "/" and no redirect is
+# strictly needed.
+#
+# This rule is here for the case where someone types a path directly, or where
+# the app later moves to real paths. Serving index.html with a 200 rather than
+# a 301 means the URL in the address bar is preserved for the app to read.
+# -----------------------------------------------------------------------------
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# -----------------------------------------------------------------------------
+# Headers
+#
+# The same protections the Node server sends, since Netlify is now the server.
+# -----------------------------------------------------------------------------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Only load code and styles from this origin. No CDNs, no inline scripts.
+    # 'unsafe-inline' is absent on purpose — that is the whole point of a CSP,
+    # and it is why the theme script lives in boot.js rather than inline.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+
+    # Never guess a file's type from its contents.
+    X-Content-Type-Options = "nosniff"
+
+    # Do not leak our paths to other sites in the Referer header.
+    Referrer-Policy = "same-origin"
+
+    # Nobody may put this page in an iframe — stops clickjacking.
+    X-Frame-Options = "DENY"
+
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Vite fingerprints asset filenames (index-JkBkS_6t.js), so the content at a
+# given name can never change. That makes it safe to cache forever: a new build
+# produces a new name, and the browser fetches it because the name is new.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html is the opposite case. It is the file that points at everything
+# else, so caching it would keep serving the old app after a deploy.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Lesson content changes when a lesson is edited, and the filename does not
+# change with it — so revalidate rather than cache blindly.
+[[headers]]
+  for = "/lessons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

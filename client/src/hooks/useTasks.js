@@ -30,6 +30,11 @@ export function useTasks({ onError, onDeleted }) {
   // single render and throw the result away.
   const [filter, setFilterState] = useState(loadFilter);
   const [justAdded, setJustAdded] = useState(null);
+  // Set when the API cannot be reached at all — as opposed to a request that
+  // failed. On a static host there is no backend, and a toast that says
+  // "cannot reach the server" over and over explains nothing. This lets the
+  // page say what is actually going on.
+  const [offline, setOffline] = useState(false);
 
   /** Every call to the server goes through this, so error handling is in one place. */
   const run = useCallback(
@@ -37,6 +42,11 @@ export function useTasks({ onError, onDeleted }) {
       try {
         return await work();
       } catch (err) {
+        // status 0 means the request never completed: no server there.
+        if (err.status === 0) {
+          setOffline(true);
+          return null;
+        }
         onError(err.message);
         return null;
       }
@@ -197,6 +207,7 @@ export function useTasks({ onError, onDeleted }) {
     visible,
     stats,
     loading,
+    offline,
     filter,
     setFilter,
     justAdded,

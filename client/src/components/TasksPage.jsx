@@ -133,6 +133,35 @@ export function TasksPage() {
 
   const { stats, visible, filter } = tasks;
 
+  // On a static host — Netlify, GitHub Pages — there is no backend for the demo
+  // to talk to. Saying so plainly is far better than an error toast repeating
+  // "cannot reach the server", which describes the symptom and not the cause.
+  if (tasks.offline) {
+    return (
+      <div className="page">
+        <div className="callout callout--note">
+          <span className="callout__title">The demo needs the local server</span>
+          <p>
+            The library you are reading is a static site, so it works anywhere. This
+            demo is the other half of the project — a task app with a Node backend and a
+            SQLite database — and there is no backend running here.
+          </p>
+          <p>
+            To use it, clone the repository and run <code>npm run dev</code>. The lessons
+            from <strong>Backend with Node</strong> onward walk through exactly how it
+            works, and reading them does not require running anything.
+          </p>
+        </div>
+
+        <p style={{ marginTop: 'var(--space-5)' }}>
+          <a className="button button--primary" href="#/">
+            Back to the library
+          </a>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
       <main className="app">
