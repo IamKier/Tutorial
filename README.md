@@ -1,8 +1,8 @@
 # Fullstack Library
 
-A web-based study library for fullstack development: 18 lessons, around two
-hours of reading, with exercises at the end of each. Browse by topic, search
-every word of every lesson, and track what you have read.
+A web-based study library for fullstack development: 23 chapters across 13
+volumes, around two and a half hours of reading, with exercises at the end of
+each. Browse by subject, search every word, and track what you have read.
 
 It ships with the application those lessons dissect — a task tracker with a
 **React** frontend, a hand-written **Node** backend and **SQLite** underneath.

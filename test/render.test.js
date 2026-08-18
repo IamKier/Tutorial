@@ -156,9 +156,9 @@ test('a subject shelf shows its books', { skip }, async (t) => {
 
   assert.match(dom, /shelf-unit/, 'the shelf unit did not render');
   assert.match(dom, /shelf-board/, 'the shelf has no board');
-  // Nine volumes, each with a spine.
+  // Thirteen volumes, each with a spine.
   const spines = (dom.match(/spine__title/g) ?? []).length;
-  assert.equal(spines, 9, `expected 9 volumes, found ${spines}`);
+  assert.equal(spines, 13, `expected 13 volumes, found ${spines}`);
 });
 
 test('runnable examples get a Run button', { skip }, async (t) => {

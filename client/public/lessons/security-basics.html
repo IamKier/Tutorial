@@ -1,0 +1,312 @@
+<h1>The holes worth knowing <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  Almost every breach you read about is one of a handful of mistakes, made
+  again. This chapter is those mistakes, each with the line of code that
+  prevents it.
+</p>
+
+<h2>The one rule underneath all of them</h2>
+
+<p>
+  <strong>Never trust input.</strong> Not from a form, not from a URL, not from
+  your own frontend, not from a response you asked for.
+</p>
+
+<p>
+  The one people find surprising is the third. Your page validates the title
+  and marks the field <code>required</code> — and none of that reaches the
+  server. Anyone can send a request directly:
+</p>
+
+<pre><code>Invoke-RestMethod -Uri http://localhost:3000/api/tasks -Method Post `
+  -ContentType 'application/json' -Body '{"title":""}'</code></pre>
+
+<p>
+  Client-side validation is a courtesy: it tells honest users what is wrong
+  without a round trip. The server's check is the one that protects the data.
+  You need both, and only one of them is security.
+</p>
+
+<h2>1. Cross-site scripting</h2>
+
+<p>
+  Content a user typed gets treated as markup, and their code runs in everyone
+  else's browser.
+</p>
+
+<pre><code>// The hole
+title.innerHTML = task.title;
+
+// A task titled:  &lt;img src=x onerror="alert(document.cookie)"&gt;
+// runs in every visitor's browser, on your domain, with their session.</code></pre>
+
+<pre><code>// The fix, in one word
+title.textContent = task.title;</code></pre>
+
+<p>
+  <code>textContent</code> puts the string on the page as <em>text</em>.
+  <code>innerHTML</code> parses it as HTML. That is the whole difference.
+</p>
+
+<p>
+  React escapes anything you interpolate, so <code>{task.title}</code> is safe
+  by default and you have to reach for <code>dangerouslySetInnerHTML</code> to
+  lose that. The name is doing its job.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Stored is worse than reflected</span>
+  <p>
+    A title goes to the server, into the database, and back out to everyone who
+    loads the list. One injection, every visitor. That is a <em>stored</em> XSS
+    — and the fix was still one word.
+  </p>
+</div>
+
+<h2>2. SQL injection</h2>
+
+<pre><code>// The hole
+db.prepare(`SELECT * FROM tasks WHERE title = '${input}'`);
+
+// Input:  ' OR 1=1 --      matches every row
+// Input:  '; DROP TABLE tasks; --</code></pre>
+
+<pre><code>// The fix
+db.prepare('SELECT * FROM tasks WHERE title = ?').all(input);</code></pre>
+
+<p>
+  A placeholder is not escaping. The value travels separately from the
+  statement, so the database treats it as data and can never parse it as SQL —
+  whatever is in it.
+</p>
+
+<p>
+  The input that finds this hole is usually not an attack. It is a customer
+  called <strong>O'Brien</strong>, whose apostrophe closes the string and
+  breaks the query. If ordinary names crash your app, an attacker has already
+  been told where to push.
+</p>
+
+<h2>3. Mass assignment</h2>
+
+<pre><code>// The hole
+Object.assign(task, req.body);
+
+// Body: {"title":"x","userId":"someone-else","isAdmin":true}</code></pre>
+
+<pre><code>// The fix: copy only what you meant to allow
+if (typeof changes.title === 'string') task.title = changes.title;
+if (typeof changes.done === 'boolean') task.done = changes.done;</code></pre>
+
+<p>
+  Forwarding a request body into an update lets the caller write any column,
+  including the ones deciding who owns a record and who is an administrator.
+  An allow-list is three lines and cannot be forgotten once written.
+</p>
+
+<h2>4. Path traversal</h2>
+
+<pre><code>// The hole
+const file = path.join(PUBLIC_DIR, req.url);
+// GET /../../src/config.js   escapes the folder entirely</code></pre>
+
+<pre><code>// The fix: resolve first, then check where you ended up
+const file = path.join(PUBLIC_DIR, requested);
+
+if (file !== PUBLIC_DIR &amp;&amp; !file.startsWith(PUBLIC_DIR + path.sep)) {
+  throw new HttpError(403, 'Forbidden');
+}</code></pre>
+
+<p>
+  Two details. Never try to strip <code>..</code> out of the string — there are
+  more encodings of it than you will think of. And the trailing
+  <code>path.sep</code> matters: without it, a sibling folder called
+  <code>public-secret</code> passes, because its path starts with the same
+  characters.
+</p>
+
+<h2>5. Passwords</h2>
+
+<pre><code>// Wrong: stored as typed
+// Wrong: SHA-256 — designed to be fast, so billions of guesses a second
+// Wrong: one salt for everything
+
+// Right
+const salt = crypto.randomBytes(16);
+const hash = await scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 });</code></pre>
+
+<p>Four properties, and each blocks a different attack:</p>
+
+<ul>
+  <li><strong>Hashed, never stored.</strong> A stolen database should not be a list of passwords.</li>
+  <li><strong>Slow on purpose.</strong> scrypt, bcrypt or Argon2 — never a general-purpose hash.</li>
+  <li><strong>A random salt each.</strong> Two people with the same password get different hashes, so cracking one reveals nothing about the other.</li>
+  <li><strong>Compared in constant time.</strong> <code>===</code> stops at the first differing byte, and that timing difference leaks the hash one byte at a time. Use <code>crypto.timingSafeEqual</code>.</li>
+</ul>
+
+<h2>6. Telling attackers things</h2>
+
+<pre><code>// Leaks which emails have accounts
+if (!user) throw new Error('No account with that email');
+if (!valid) throw new Error('Wrong password');
+
+// Says nothing either way
+if (!user || !valid) throw new HttpError(401, 'Invalid email or password');</code></pre>
+
+<p>
+  Timing leaks the same thing more quietly. Verifying a password takes about
+  100ms; skipping it for an unknown address makes that response measurably
+  faster, so an attacker can enumerate your users without guessing a single
+  password. The fix is to hash anyway, against a dummy value that cannot match.
+</p>
+
+<p>The same applies to errors reaching the client:</p>
+
+<pre><code>// Leaks file paths, library versions, sometimes SQL
+sendJson(res, 500, { error: err.message });
+
+// Log the detail where you can read it; send a sentence
+console.error(err);
+sendJson(res, 500, { error: 'Something went wrong' });</code></pre>
+
+<h2>7. Cross-site request forgery</h2>
+
+<p>
+  You are logged in here. You visit a malicious page. It submits a hidden form
+  to our API, and the browser attaches your session cookie because that is what
+  browsers do.
+</p>
+
+<p>Two defences, and this project uses both:</p>
+
+<pre><code>Set-Cookie: sid=...; HttpOnly; SameSite=Lax; Secure</code></pre>
+
+<ul>
+  <li><strong>SameSite=Lax</strong> — the browser will not send the cookie with a cross-site POST at all.</li>
+  <li><strong>Require JSON</strong> on writes. An HTML form can only send three content types, and <code>application/json</code> is not one of them; sending JSON cross-origin needs a preflight the server never approves.</li>
+</ul>
+
+<p>
+  <code>HttpOnly</code> is doing separate work: JavaScript cannot read the
+  cookie, so an XSS hole cannot walk off with the session.
+</p>
+
+<h2>8. Content-Security-Policy</h2>
+
+<pre><code>Content-Security-Policy: default-src 'self'; script-src 'self'</code></pre>
+
+<p>
+  The browser refuses to run script from anywhere but your origin — so even a
+  successful injection has nothing to execute.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">'unsafe-inline' on script-src throws it away</span>
+  <p>
+    It is the usual quick fix when a policy blocks an inline
+    <code>&lt;script&gt;</code>, and it removes most of the protection you added
+    the header for. Move the script to a file instead — which is why this
+    project's theme script lives in <code>boot.js</code> rather than in the
+    page.
+  </p>
+  <p>
+    <code>style-src 'unsafe-inline'</code> is a much smaller concession:
+    injected CSS can restyle a page but cannot execute anything.
+  </p>
+</div>
+
+<h2>The rest of the checklist</h2>
+
+<ul>
+  <li><strong>Rate limit</strong> anything that writes or authenticates.</li>
+  <li><strong>Cap the request body</strong>, or one endless upload exhausts your memory.</li>
+  <li><strong>Scope every query</strong> by the current user, in the SQL — not in a check a route might forget.</li>
+  <li><strong>HTTPS everywhere.</strong> Over plain HTTP, every header and body is readable by anyone on the network.</li>
+  <li><strong>Keep dependencies few and current.</strong> Every package is code you did not read, running with your privileges.</li>
+</ul>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Find the hole in each</h3>
+  </div>
+<pre><code>// A
+app.get('/file', (req, res) =&gt; res.sendFile(__dirname + req.query.name));
+
+// B
+const user = db.prepare(`SELECT * FROM users WHERE email = '${email}'`).get();
+
+// C
+res.send(`&lt;h1&gt;Results for ${req.query.q}&lt;/h1&gt;`);
+
+// D
+if (!user) return res.status(404).send('No such user');
+if (!await verify(password, user.hash)) return res.status(401).send('Wrong password');</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <ul>
+      <li><strong>A — path traversal.</strong> <code>?name=/../../.env</code>. Resolve the path, then check the result is inside the folder.</li>
+      <li><strong>B — SQL injection.</strong> Use a placeholder. It also breaks on any address containing an apostrophe.</li>
+      <li><strong>C — reflected XSS.</strong> The query string goes straight into HTML. Escape it, or build the DOM with <code>textContent</code>.</li>
+      <li><strong>D — user enumeration.</strong> Two different responses tell an attacker which emails exist. One message for both, and hash even when the user is missing so the timing matches.</li>
+    </ul>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Prove the XSS, then prove the fix</h3>
+  </div>
+  <p>
+    Run the app. Add a task called
+    <code>&lt;img src=x onerror="alert(1)"&gt;</code> — nothing happens. Now edit
+    <code>client/src/library/enhance.js</code>, change the
+    <code>span.textContent</code> in <code>highlight()</code> to
+    <code>innerHTML</code>, rebuild, and open any chapter. Change it back.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      With <code>innerHTML</code> the browser parses the code sample as markup
+      rather than showing it. On a lesson page that means the examples stop
+      being visible; with content a user typed it means their script runs.
+    </p>
+    <p>
+      Worth noticing which way round the safety is. Hand-written DOM code is
+      safe only if you remember <code>textContent</code> every single time.
+      React is safe unless you deliberately opt out. Same protection, opposite
+      defaults — and defaults are what you get on a tired afternoon.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Attack the running API</h3>
+  </div>
+  <p>Try each of these against the local app and explain what stopped it:</p>
+<pre><code>Invoke-RestMethod -Uri "http://localhost:3000/api/tasks" -Method Post `
+  -ContentType 'application/json' -Body '{"title":123}'
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/tasks/xyz" -Method Patch `
+  -ContentType 'application/json' -Body '{"id":"hijacked","done":true}'
+
+Invoke-WebRequest -Uri "http://localhost:3000/../../src/config.js"
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/tasks" -Method Post `
+  -ContentType 'application/x-www-form-urlencoded' -Body 'title=hack'</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><strong>400.</strong> <code>typeof body.title === 'string'</code> rejects a number before anything else looks at it.</li>
+      <li><strong>404</strong> for an unknown id. With a real one it updates, but <code>id</code> is ignored — the allow-list in <code>updateTask</code> copies only <code>title</code>, <code>done</code> and <code>dueAt</code>.</li>
+      <li><strong>404 or 403.</strong> The traversal guard in <code>static.js</code>, and the client normalising the path before it is even sent.</li>
+      <li><strong>415.</strong> The JSON content-type requirement — which is the CSRF defence, since an HTML form cannot produce that content type.</li>
+    </ol>
+  </details>
+</div>

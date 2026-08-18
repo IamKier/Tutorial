@@ -1,0 +1,260 @@
+<h1>Getting it online <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  Deployment is where a project stops being yours and starts being something
+  other people can break. Most of the difficulty is not the upload — it is that
+  the server is not your laptop.
+</p>
+
+<h2>The first question: does it need a server?</h2>
+
+<p>This decides everything else, and it has a clean test:</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th></th><th>Static</th><th>Needs a server</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>What it is</td><td>Files handed out as they are</td><td>A process that stays running</td></tr>
+    <tr><td>Data</td><td>None, or fetched from elsewhere</td><td>A database it owns</td></tr>
+    <tr><td>Hosts</td><td>Netlify, GitHub Pages, Cloudflare</td><td>Fly.io, Render, a VPS</td></tr>
+    <tr><td>Cost</td><td>Usually free</td><td>A few dollars a month</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  This library is static: it fetches chapter files and nothing else, so it can
+  live anywhere. The task app is not — it needs Node and SQLite. One repository,
+  two answers.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">A static host cannot run your backend</span>
+  <p>
+    Netlify and Vercel serve files and short-lived functions. They cannot keep
+    a process alive or give you a disk that survives a deploy. Pushing a Node
+    app there produces a site that builds successfully and does not work —
+    which is a far more confusing failure than one that refuses outright.
+  </p>
+</div>
+
+<h2>The build step</h2>
+
+<p>
+  The files you edit are not the files you ship. Vite compiles
+  <code>client/</code> into <code>dist/</code>, and <code>dist/</code> is what
+  the host serves.
+</p>
+
+<pre><code>npm run build       # client/ -> dist/
+npm run serve       # build, then serve everything from one process</code></pre>
+
+<p>
+  A host needs to be told both halves of this, and getting either wrong gives
+  you a blank page with no error:
+</p>
+
+<pre><code># netlify.toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"</code></pre>
+
+<p>
+  <code>NODE_VERSION</code> matters more than it looks. Hosts default to
+  whatever was current when they last updated, and if that is older than your
+  <code>package.json</code> requires, the install fails with an engine error
+  that reads as though your dependencies are broken.
+</p>
+
+<h2>Configuration comes from the environment</h2>
+
+<pre><code>export const PORT = Number(process.env.PORT ?? 3000);
+export const DATA_DIR = process.env.DATA_DIR ?? path.join(ROOT, 'data');
+export const IS_PRODUCTION = process.env.NODE_ENV === 'production';</code></pre>
+
+<p>Two reasons, and the second is the important one:</p>
+
+<ul>
+  <li>The same code runs in both places, with only the environment differing.</li>
+  <li>A secret in a source file is in version control, and from there in every clone and every laptop backup, permanently. Deleting it later does not help — it stays in the history.</li>
+</ul>
+
+<h2>The disk is not permanent</h2>
+
+<p>
+  This is the mistake that costs people real data. Most hosts give each deploy a
+  fresh filesystem. Write your database to the application folder and it is
+  wiped every time you ship a change.
+</p>
+
+<pre><code># fly.toml — a volume that survives deploys
+[[mounts]]
+  source = "tasks_data"
+  destination = "/data"
+
+[env]
+  DATA_DIR = "/data"</code></pre>
+
+<p>
+  Which is why <code>DATA_DIR</code> is configurable at all: so the database can
+  be told to live somewhere that persists.
+</p>
+
+<h2>HTTPS, and the headers behind it</h2>
+
+<p>
+  You do not usually terminate HTTPS yourself. A reverse proxy does it and
+  forwards plain HTTP to your app:
+</p>
+
+<pre><code>tasks.example.com {
+    reverse_proxy localhost:3000
+}</code></pre>
+
+<p>
+  Caddy gets and renews the certificate on its own. The consequence for your
+  code is that the connection it sees is <em>not</em> the connection the user
+  made — the real scheme and IP arrive in headers:
+</p>
+
+<pre><code>x-forwarded-proto: https
+x-forwarded-for: 203.0.113.7</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Only believe those headers behind a proxy</span>
+  <p>
+    Anyone can send them. Trusting <code>x-forwarded-for</code> with no proxy in
+    front lets a caller claim any IP address they like, which walks straight
+    past a rate limiter that counts by IP.
+  </p>
+  <p>
+    Hence <code>TRUST_PROXY</code> being a setting that defaults to off. It is
+    one of the few places where the secure default is also the inconvenient one.
+  </p>
+</div>
+
+<h2>Shutting down without dropping requests</h2>
+
+<pre><code>function shutdown(signal) {
+  server.close(() =&gt; {      // stop accepting; finish what is in flight
+    closeDatabase();        // checkpoint the write-ahead log
+    process.exit(0);
+  });
+
+  // The backstop: if something refuses to finish, leave anyway.
+  setTimeout(() =&gt; process.exit(1), 10_000).unref();
+}
+
+process.on('SIGTERM', () =&gt; shutdown('SIGTERM'));</code></pre>
+
+<p>
+  Every deploy sends <code>SIGTERM</code> and then kills the process. Without a
+  handler, whoever was mid-save gets a dropped connection each time you ship.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">Why the Dockerfile says node, not npm</span>
+  <p>
+    <code>CMD ["node", "server.js"]</code> rather than <code>npm start</code>.
+    npm sits between the process manager and your app and does not forward
+    signals properly, so <code>SIGTERM</code> never reaches the handler above
+    and the graceful shutdown you carefully wrote never runs.
+  </p>
+</div>
+
+<h2>A checklist before you expose it</h2>
+
+<ul>
+  <li><strong>Secrets in the environment</strong>, never in the repository.</li>
+  <li><strong>A persistent volume</strong> mounted where the database lives.</li>
+  <li><strong>HTTPS</strong>, with <code>TRUST_PROXY</code> set if something else terminates it.</li>
+  <li><strong>A health endpoint</strong> the host can poll — and keep it open, or a monitor getting 401 will restart your app forever.</li>
+  <li><strong>Backups.</strong> SQLite is one file, so this is one command — but nothing does it for you.</li>
+  <li><strong>Know what is unprotected.</strong> This project's task app has no accounts: anyone who finds the URL can edit everything. That is fine on a private network and wrong in public.</li>
+</ul>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Static or not?</h3>
+  </div>
+  <p>Which of these can go on a free static host, and why?</p>
+  <ol>
+    <li>A personal blog built from Markdown at build time</li>
+    <li>A page showing live cryptocurrency prices from a public API</li>
+    <li>A comment form that stores comments</li>
+    <li>A photo gallery with images in the repository</li>
+  </ol>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><strong>Static.</strong> The Markdown becomes HTML during the build; nothing runs afterwards.</li>
+      <li><strong>Static.</strong> The fetching happens in the reader's browser. Someone else's server does the work.</li>
+      <li><strong>Not static.</strong> Storing anything needs somewhere to store it. Either a backend, or a hosted service that provides one.</li>
+      <li><strong>Static.</strong> Images are files.</li>
+    </ol>
+    <p>
+      The test is not "is it interactive" — it is <strong>does the server have
+      to remember anything</strong>.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Break it the way a deploy would</h3>
+  </div>
+  <p>
+    Run the app, add a few tasks, then delete <code>data/app.db</code> while it
+    is stopped and start it again. What happens, and which deployment mistake
+    does this simulate?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      The app starts cleanly and every task is gone — migrations run against an
+      empty file and rebuild the schema, so nothing errors.
+    </p>
+    <p>
+      That is exactly what a deploy without a persistent volume does, every
+      single time you ship. And because there is no error, you find out from a
+      user rather than from a log.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Read this project's deployment config</h3>
+  </div>
+  <p>
+    Open <code>netlify.toml</code>. Find the rule that answers
+    <code>/api/*</code> with a 404, and explain why it exists when there is no
+    API on that host anyway.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      Without it, the catch-all single-page-app redirect matches
+      <code>/api/tasks</code> too and returns <code>index.html</code> with a
+      200. The frontend then sees a successful response, tries to parse a web
+      page as JSON, and reports "Unexpected token '&lt;'" — a message about the
+      symptom that hides the cause entirely.
+    </p>
+    <p>
+      A 404 is the honest answer. The client also checks the content type now,
+      so it detects this on any host rather than relying on each one being
+      configured correctly — belt and braces, because this exact bug shipped
+      once already.
+    </p>
+  </details>
+</div>

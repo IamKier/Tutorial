@@ -1,0 +1,277 @@
+<h1>Branches and remotes <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  A branch is a movable label pointing at a commit. That is the whole idea, and
+  once it lands, most of Git stops being mysterious.
+</p>
+
+<h2>What a branch actually is</h2>
+
+<pre><code>A ─── B ─── C          ← main
+             \
+              D ─── E   ← feature</code></pre>
+
+<p>
+  <code>main</code> is a label on commit C. <code>feature</code> is a label on
+  E. <code>HEAD</code> is a label saying which branch you are on.
+</p>
+
+<p>
+  Creating a branch writes a file containing a hash. It copies nothing, which
+  is why it is instant even in a repository with a decade of history — and why
+  the advice is to branch freely rather than treat it as an event.
+</p>
+
+<pre><code>git branch                    # list branches
+git switch -c feature         # create one and move to it
+git switch main               # move back
+git branch -d feature         # delete it once merged</code></pre>
+
+<div class="callout callout--note">
+  <span class="callout__title">switch and restore, not checkout</span>
+  <p>
+    <code>git checkout</code> does both jobs — moving between branches and
+    discarding file changes — which is how people destroy work while trying to
+    change branch. <code>switch</code> and <code>restore</code> split it in
+    two. <code>checkout</code> still works and older tutorials all use it.
+  </p>
+</div>
+
+<h2>Merging</h2>
+
+<pre><code>git switch main
+git merge feature</code></pre>
+
+<p>Two things can happen, and they look different in the history:</p>
+
+<p>
+  <strong>Fast-forward.</strong> If <code>main</code> has not moved since you
+  branched, Git slides the label along. No merge commit, and the history stays
+  a straight line.
+</p>
+
+<pre><code>A ─── B ─── C ─── D ─── E     ← main, feature</code></pre>
+
+<p>
+  <strong>A real merge.</strong> If both moved, Git builds a commit with two
+  parents.
+</p>
+
+<pre><code>A ─── B ─── C ───────── F     ← main
+             \         /
+              D ─── E        ← feature</code></pre>
+
+<h2>Conflicts</h2>
+
+<p>
+  A conflict happens when both branches changed the same lines. Git does not
+  guess; it stops and marks the file:
+</p>
+
+<pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+const PORT = 3000;
+=======
+const PORT = Number(process.env.PORT ?? 8080);
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature</code></pre>
+
+<p>
+  Above the <code>=======</code> is what is on the branch you are on; below is
+  what is coming in. To resolve it: edit the file into what you actually want,
+  delete all three marker lines, then <code>git add</code> it and
+  <code>git commit</code>.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The markers are not magic</span>
+  <p>
+    They are ordinary text that Git wrote into your file. Nothing stops you
+    committing them, and a stray <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> in a
+    source file is a genuinely common and baffling bug. Search for the markers
+    before committing a resolved merge.
+  </p>
+  <p>
+    <code>git merge --abort</code> puts everything back if the conflict turns
+    out to be bigger than you thought.
+  </p>
+</div>
+
+<h2>Remotes</h2>
+
+<p>
+  A remote is another copy of the repository, usually on a server. Your local
+  repository is complete on its own — the remote is a peer, not an authority.
+  That is what "distributed" means.
+</p>
+
+<pre><code>git remote -v                       # which remotes exist
+git remote add origin &lt;url&gt;         # "origin" is only a conventional name
+git push -u origin main             # send commits; -u remembers the pairing
+git pull                            # fetch and merge
+git fetch                           # fetch WITHOUT merging</code></pre>
+
+<p>
+  <code>fetch</code> then <code>log</code> is the safer habit: you see what is
+  coming before it lands in your working tree. <code>pull</code> is
+  <code>fetch</code> plus <code>merge</code> in one step, which is convenient
+  right up until it drops a conflict on you mid-thought.
+</p>
+
+<h2>Rebase</h2>
+
+<pre><code>git switch feature
+git rebase main</code></pre>
+
+<p>
+  Rebase replays your commits on top of another branch, as though you had
+  started from there:
+</p>
+
+<pre><code>before:  A ─── B ─── C          ← main
+                \
+                 D ─── E        ← feature
+
+after:   A ─── B ─── C          ← main
+                      \
+                       D' ─── E' ← feature</code></pre>
+
+<p>
+  The result is a straight history with no merge commit. The cost: D and E are
+  <em>new commits</em> with new hashes. The originals are gone.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never rebase what you have pushed</span>
+  <p>
+    Anyone who pulled the old commits now has history that no longer exists
+    anywhere else. Their next pull produces a tangle that takes someone an
+    afternoon to unpick.
+  </p>
+  <p>
+    The rule that keeps you out of trouble: <strong>rebase your own unpushed
+    work, merge everything else.</strong>
+  </p>
+</div>
+
+<h2>A workflow that scales down to one person</h2>
+
+<pre><code>git switch -c fix-blank-page     # branch per piece of work
+# ... edit, and commit as you go
+git switch main
+git pull                         # catch up
+git merge fix-blank-page
+git push
+git branch -d fix-blank-page</code></pre>
+
+<p>
+  Working alone this feels like ceremony, and it earns its keep the first time
+  a change turns out to be wrong: the branch is thrown away and
+  <code>main</code> never saw it.
+</p>
+
+<h2>When it goes wrong</h2>
+
+<pre><code>git reflog</code></pre>
+
+<p>
+  Every move of <code>HEAD</code>, including the ones that "lost" a commit.
+  Reset too far? Rebased into a mess? The old commit is still there and
+  <code>reflog</code> has its hash:
+</p>
+
+<pre><code>git reflog
+# e8e21d3 HEAD@{0}: reset: moving to HEAD~3
+# 78f75e8 HEAD@{1}: commit: Pin the masthead      ← the one you wanted
+
+git reset --hard 78f75e8</code></pre>
+
+<p>
+  Git almost never deletes a commit. It stops pointing at it, and unreferenced
+  commits survive for weeks before garbage collection. <code>reflog</code> is
+  the first thing to reach for, not the last.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Cause a conflict on purpose</h3>
+  </div>
+  <p>
+    In a scratch repository, commit a file with one line. Branch, change that
+    line, commit. Switch back to main, change the same line differently,
+    commit. Merge. Resolve it, and check nothing is left behind.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>git init &amp;&amp; echo "port 3000" &gt; config.txt
+git add . &amp;&amp; git commit -m "Add config"
+
+git switch -c feature
+echo "port 8080" &gt; config.txt
+git commit -am "Use 8080"
+
+git switch main
+echo "port 5000" &gt; config.txt
+git commit -am "Use 5000"
+
+git merge feature              # CONFLICT
+# edit config.txt to what you want, removing all three marker lines
+grep -c '&lt;&lt;&lt;&lt;&lt;&lt;&lt;' config.txt   # must be 0
+git add config.txt
+git commit</code></pre>
+    <p>
+      That <code>grep</code> is worth making a habit. Committed conflict markers
+      are a classic, and they usually surface as a syntax error in a file
+      nobody remembers touching.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Lose a commit and get it back</h3>
+  </div>
+  <p>
+    Make three commits. <code>git reset --hard HEAD~2</code> to throw two away.
+    Confirm with <code>git log</code> that they are gone, then recover them.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>git log --oneline          # note the hash of the newest commit
+git reset --hard HEAD~2
+git log --oneline          # two commits gone
+
+git reflog                 # every move of HEAD, including the reset
+git reset --hard &lt;hash&gt;    # the hash from before the reset
+git log --oneline          # back</code></pre>
+    <p>
+      The lesson is not the commands. It is that <code>--hard</code> is far
+      less final than it feels, provided the work was <em>committed</em>.
+      Uncommitted changes are the ones genuinely gone — which is the argument
+      for committing early and often.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Merge or rebase?</h3>
+  </div>
+  <p>Which would you use, and why?</p>
+  <ol>
+    <li>Your local branch is three commits behind main. Nothing is pushed.</li>
+    <li>A colleague has pulled your branch and is working on it.</li>
+    <li>Bringing a finished feature branch into main on a shared project.</li>
+  </ol>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><strong>Rebase.</strong> Your own unpushed work, so rewriting it costs nobody anything, and you get a straight history.</li>
+      <li><strong>Merge.</strong> Rebasing would rewrite commits they already have, and their next pull becomes a mess.</li>
+      <li><strong>Either, but be consistent.</strong> Merge keeps a record that a branch existed and when it landed; rebase keeps the log linear and easy to read. Teams argue about this endlessly — the only wrong answer is doing both at random.</li>
+    </ol>
+  </details>
+</div>

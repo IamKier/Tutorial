@@ -33,7 +33,7 @@ export const SUBJECTS = [
     id: 'web-development',
     title: 'Web Development',
     tagline: 'Building for the browser, the server, and the database beneath',
-    note: 'Nine volumes, from the structure of a page to the queries behind it. Read in order — each assumes the ones before it.',
+    note: 'Thirteen volumes, from the structure of a page to the practices around shipping it. Read in order — each assumes the ones before it.',
     books: [
       {
         id: 'start',
@@ -137,6 +137,53 @@ export const SUBJECTS = [
             words: 1697,
           },
           { slug: 'sql-basics', title: 'SQL and SQLite', level: 'Intermediate', words: 1733 },
+        ],
+      },
+      {
+        id: 'git',
+        title: 'Git',
+        tagline: 'Changing anything without fear of losing it',
+        spine: '#7a4b28',
+        chapters: [
+          { slug: 'git-basics', title: 'Tracking changes', level: 'Basics', words: 1185 },
+          {
+            slug: 'git-branching',
+            title: 'Branches and remotes',
+            level: 'Intermediate',
+            words: 1203,
+          },
+        ],
+      },
+      {
+        id: 'testing',
+        title: 'Testing',
+        tagline: 'Knowing when you have broken something you were not looking at',
+        spine: '#3f6b53',
+        chapters: [
+          { slug: 'testing-basics', title: 'What to test, and why', level: 'Basics', words: 1218 },
+        ],
+      },
+      {
+        id: 'deployment',
+        title: 'Deployment',
+        tagline: 'The server is not your laptop',
+        spine: '#4d5a6b',
+        chapters: [
+          { slug: 'deployment', title: 'Getting it online', level: 'Intermediate', words: 1151 },
+        ],
+      },
+      {
+        id: 'security',
+        title: 'Security',
+        tagline: 'The handful of mistakes behind almost every breach',
+        spine: '#6e2233',
+        chapters: [
+          {
+            slug: 'security-basics',
+            title: 'The holes worth knowing',
+            level: 'Intermediate',
+            words: 1501,
+          },
         ],
       },
       {

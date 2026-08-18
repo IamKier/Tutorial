@@ -1,0 +1,278 @@
+<h1>What to test, and why <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  A test is code that fails when your code is wrong. The hard part is not
+  writing them — it is knowing which ones are worth having, because a suite
+  full of tests that never fail is worse than none at all.
+</p>
+
+<h2>The point</h2>
+
+<p>
+  Not "proving the code works". Tests cannot do that. What they do is tell you
+  <em>when you break something you were not looking at</em> — which is most of
+  what goes wrong once a project outgrows one afternoon.
+</p>
+
+<p>
+  This library has a concrete example of that failing. There was a test
+  asserting a lesson page rendered, and it matched the string
+  <code>prose</code>. That is the container's class, which is always present.
+  Meanwhile the syntax highlighting, the copy buttons and the heading ids were
+  all being created and instantly wiped by React — silently, for weeks. The
+  test was green throughout.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Assert the thing you care about</span>
+  <p>
+    Not something that happens to sit near it. A test that passes for the wrong
+    reason is worse than no test, because it buys confidence you have not
+    earned.
+  </p>
+</div>
+
+<h2>What is worth testing</h2>
+
+<p>Ranked by how much they pay back, in this project's experience:</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Test</th><th>Worth it when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Pure logic</strong></td>
+      <td>Almost always. Cheap to write, fast, and never flaky.</td>
+    </tr>
+    <tr>
+      <td><strong>Rules that protect data</strong></td>
+      <td>Always. Allow-lists, ownership checks, limits.</td>
+    </tr>
+    <tr>
+      <td><strong>Does it render at all</strong></td>
+      <td>Always. One test, and it catches the whole class of "blank page".</td>
+    </tr>
+    <tr>
+      <td><strong>A whole feature end to end</strong></td>
+      <td>For the two or three journeys that matter most.</td>
+    </tr>
+    <tr>
+      <td><strong>Every component in isolation</strong></td>
+      <td>Rarely. Slow to write, breaks on every redesign, catches little.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  The pattern: test <strong>behaviour that would be expensive to get wrong</strong>,
+  not <strong>every line you wrote</strong>. Coverage percentages measure the
+  second and are routinely mistaken for the first.
+</p>
+
+<h2>The shape of a test</h2>
+
+<pre><code>import test from 'node:test';
+import assert from 'node:assert/strict';
+
+test('deleteTask reports whether anything went', () => {
+  // Arrange — set up the world
+  const task = db.createTask({ title: 'Delete me' });
+
+  // Act and Assert
+  assert.equal(db.deleteTask(task.id), true);
+
+  // Deleting twice is not an error — it is a no-op the second time,
+  // which is what makes DELETE safe to retry.
+  assert.equal(db.deleteTask(task.id), false);
+});</code></pre>
+
+<p>
+  Node has a test runner built in, so this project needs no testing framework at
+  all — <code>npm test</code> and nothing installed.
+</p>
+
+<p>
+  Note <code>assert/strict</code> rather than plain <code>assert</code>. The
+  non-strict version uses <code>==</code>, so <code>assert.equal(1, '1')</code>
+  passes. A test that cannot tell a number from a string is not much of a test.
+</p>
+
+<h2>A good test name is a sentence</h2>
+
+<pre><code>❌ test('deleteTask', ...)
+❌ test('works', ...)
+❌ test('test 3', ...)
+
+✅ test('deleteTask reports whether anything went', ...)
+✅ test('one user cannot read another user\'s task', ...)
+✅ test('an update with no recognised fields changes nothing', ...)</code></pre>
+
+<p>
+  When a test fails, its name is the first thing you see and often the only
+  thing you need. "deleteTask ✗" tells you nothing; "deleting twice is not an
+  error ✗" tells you what was expected and roughly where to look.
+</p>
+
+<h2>Test the edges, not the middle</h2>
+
+<p>
+  The happy path usually works — you ran it by hand while writing it. The bugs
+  live at the boundaries:
+</p>
+
+<ul>
+  <li><strong>Zero.</strong> Empty list, empty string, no results. Division by zero producing <code>NaN</code> is the classic.</li>
+  <li><strong>One.</strong> Off-by-one, and the difference between "1 item" and "1 items".</li>
+  <li><strong>Missing.</strong> <code>null</code>, <code>undefined</code>, a field the caller forgot.</li>
+  <li><strong>Wrong type.</strong> A number where a string was expected.</li>
+  <li><strong>Too much.</strong> A 5,000-character title. A million rows.</li>
+  <li><strong>Twice.</strong> Deleting twice, submitting twice, the same request arriving again.</li>
+</ul>
+
+<div class="callout callout--tip">
+  <span class="callout__title">Write the test when you find the bug</span>
+  <p>
+    The most valuable moment to write a test is just after something broke.
+    You know the exact conditions, and you have proof the test can fail —
+    which is the one thing you can never be sure of when writing a test for
+    working code.
+  </p>
+</div>
+
+<h2>Tests that lie</h2>
+
+<h3>The one that cannot fail</h3>
+
+<pre><code>// Passes whatever the function does
+test('returns a value', () => {
+  assert.ok(getTasks() !== undefined);
+});</code></pre>
+
+<h3>The one that depends on time</h3>
+
+<pre><code>// Passes or fails depending on how fast the machine is
+const a = db.createTask({ title: 'First' });
+const b = db.createTask({ title: 'Second' });
+assert.ok(b.createdAt &gt; a.createdAt);   // same millisecond? flaky.</code></pre>
+
+<p>
+  This project had exactly that. Two tasks created in the same millisecond made
+  the ordering ambiguous, so the test passed or failed depending on the
+  machine. The fix was not to loosen the test — it was to make the ordering
+  deterministic by tie-breaking on <code>rowid</code>. <strong>A flaky test is
+  usually pointing at a real ambiguity.</strong>
+</p>
+
+<h3>The one that depends on another test</h3>
+
+<pre><code>// Passes alone, fails when the suite runs in a different order
+test('lists three tasks', () =&gt; {
+  assert.equal(db.listTasks().length, 3);   // three from... where?
+});</code></pre>
+
+<p>
+  Each test must set up what it needs and leave nothing behind. This project's
+  data tests call a <code>reset()</code> first for exactly that reason.
+</p>
+
+<h2>Where the tests live here</h2>
+
+<pre><code>test/db.test.js        the data layer: allow-lists, limits, conversions
+test/render.test.js    does it actually appear on the screen</code></pre>
+
+<p>
+  Two files, seventeen tests, about four seconds. That is a suite you run
+  without thinking about it — which is the only kind that gets run.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Find the test that cannot fail</h3>
+  </div>
+  <p>Which of these would still pass if the function were completely broken?</p>
+<pre><code>test('a', () =&gt; assert.ok(summarise([]) !== null));
+test('b', () =&gt; assert.equal(summarise([]).percent, 0));
+test('c', () =&gt; assert.ok(typeof summarise([]) === 'object'));
+test('d', () =&gt; assert.deepEqual(
+  summarise([{done: true}, {done: false}]),
+  { total: 2, done: 1, remaining: 1, percent: 50 }
+));</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      <strong>a and c.</strong> Any function returning any object passes both —
+      including one that returns <code>{}</code> and ignores its argument
+      entirely.
+    </p>
+    <p>
+      <strong>b</strong> is genuinely useful: it pins the divide-by-zero guard,
+      which is the exact line most likely to be wrong.
+      <strong>d</strong> is the strongest, checking the whole shape at once.
+    </p>
+    <p>
+      The tell for a useless assertion: ask "what implementation would fail
+      this?" If the answer is "almost none", delete it.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">List the edges</h3>
+  </div>
+  <p>
+    For a function <code>splitName(fullName)</code> returning
+    <code>{ first, last }</code>, list eight inputs worth testing before you
+    write any code.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <ul>
+      <li><code>'Kier Santos'</code> — the happy path</li>
+      <li><code>'Kier'</code> — one word, so no last name</li>
+      <li><code>''</code> — empty</li>
+      <li><code>'  Kier  Santos  '</code> — extra whitespace</li>
+      <li><code>'Kier van der Berg'</code> — three or more parts; where does the surname start?</li>
+      <li><code>'Kier-Santos'</code> — a hyphen, which is not a separator</li>
+      <li><code>null</code> or <code>undefined</code></li>
+      <li><code>12345</code> — not a string at all</li>
+    </ul>
+    <p>
+      Note that half of these are not "does the code work" but "what should it
+      even do?". That is the real value of listing edges first — it surfaces
+      decisions before you have accidentally made them.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Prove a test can fail</h3>
+  </div>
+  <p>
+    In this project, open <code>src/db/tasks.js</code> and delete the
+    <code>AND userId = ?</code>-style guard — the allow-list in
+    <code>updateTask</code> that ignores unknown fields. Run
+    <code>npm test</code>. Then put it back.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      "updateTask only writes allowed fields" should fail. If it does not, that
+      test is not testing what its name claims.
+    </p>
+    <p>
+      This is worth doing to any test you have just written. A test you have
+      never seen fail is a test you have never seen work — you have only seen
+      it not complain, and those are different things.
+    </p>
+  </details>
+</div>

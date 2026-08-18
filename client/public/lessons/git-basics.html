@@ -1,0 +1,259 @@
+<h1>Tracking changes <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  Git remembers every version of every file, so you can change anything without
+  the fear that you will not be able to get back. That fear is what makes people
+  keep folders called <code>project-final-v2-REAL</code>.
+</p>
+
+<h2>The three places a file can be</h2>
+
+<p>
+  Almost every confusing thing about Git comes from not knowing which of these
+  a file is in:
+</p>
+
+<pre><code>  working tree          staging area           repository
+  (your files)          (what goes next)       (committed history)
+       │                       │                      │
+       │──── git add ─────────▶│                      │
+       │                       │──── git commit ─────▶│
+       │◀────────────── git checkout ─────────────────│</code></pre>
+
+<ul>
+  <li><strong>Working tree</strong> — the files as they are on disk right now.</li>
+  <li><strong>Staging area</strong> — the changes you have chosen for the next commit. Git's own name for it is the "index".</li>
+  <li><strong>Repository</strong> — every commit ever made, in <code>.git/</code>.</li>
+</ul>
+
+<p>
+  The staging area is the part other version control systems do not have, and
+  the part people find pointless at first. Its purpose: you can make five
+  changes and commit only two of them, so a commit is one idea rather than
+  one afternoon.
+</p>
+
+<h2>Starting</h2>
+
+<pre><code>git init                    # start tracking this folder
+git status                  # what has changed, and what is staged
+git add server.js           # stage one file
+git add .                   # stage everything changed
+git commit -m "Add server"  # record the staged changes
+git log --oneline           # the history, one line each</code></pre>
+
+<p>
+  <code>git status</code> is the one to run constantly. It tells you which of
+  the three places everything is in, and it suggests the command for whatever
+  you probably want next.
+</p>
+
+<h2>What a commit is</h2>
+
+<p>
+  Not a diff — a complete snapshot of every tracked file, plus a pointer to the
+  commit before it. That is why moving between versions is instant: Git is not
+  replaying changes, it is checking out a stored state.
+</p>
+
+<pre><code>git log --oneline
+
+e8e21d3 Add a catalogue checker instead of a database
+78f75e8 Pin the masthead, and give it a real height
+4f3a20c Add a main page between the cover and the shelf</code></pre>
+
+<p>
+  That hex string is a hash of the commit's entire content — the files, the
+  message, the author, the time, and the parent commit. Change any of it and
+  the hash changes, which is what makes history tamper-evident.
+</p>
+
+<h2>Writing a message worth reading</h2>
+
+<p>
+  You are writing to whoever runs <code>git log</code> in a year, and that is
+  usually you.
+</p>
+
+<pre><code>❌ fix
+❌ updates
+❌ asdf
+❌ fixed the thing that was broken
+
+✅ Fix blank page: malformed regex crashed the app on load
+✅ Pin the masthead, and give it a real height</code></pre>
+
+<p>The shape that works:</p>
+
+<ul>
+  <li><strong>A short first line</strong>, around fifty characters, in the imperative — "Add", "Fix", "Remove", as though completing the sentence "this commit will…".</li>
+  <li><strong>A blank line</strong>, then as much detail as the change deserves.</li>
+  <li><strong>Say why, not what.</strong> The diff already shows what changed. It cannot show what you were trying to achieve, or what you tried first that did not work.</li>
+</ul>
+
+<div class="callout callout--tip">
+  <span class="callout__title">The test for a good message</span>
+  <p>
+    Imagine finding this commit while hunting a bug at midnight. Does the
+    message tell you whether this is the change that broke it? "Updates" never
+    does.
+  </p>
+</div>
+
+<h2>Undoing things</h2>
+
+<p>This is the table worth keeping. The four situations are genuinely different:</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>You want to</th><th>Command</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Discard changes to a file</td><td><code>git restore file.js</code></td></tr>
+    <tr><td>Unstage, but keep the changes</td><td><code>git restore --staged file.js</code></td></tr>
+    <tr><td>Change the last commit's message</td><td><code>git commit --amend</code></td></tr>
+    <tr><td>Undo a commit, keep the changes</td><td><code>git reset --soft HEAD~1</code></td></tr>
+    <tr><td>Undo a commit and its changes</td><td><code>git reset --hard HEAD~1</code></td></tr>
+    <tr><td>Undo a <em>pushed</em> commit</td><td><code>git revert &lt;hash&gt;</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout callout--warn">
+  <span class="callout__title">reset --hard is the one that loses work</span>
+  <p>
+    It throws away uncommitted changes with no confirmation and no undo. Run
+    <code>git status</code> first, every time — if it says nothing is modified,
+    there is nothing to lose.
+  </p>
+  <p>
+    And use <code>revert</code> rather than <code>reset</code> for anything you
+    have pushed. <code>revert</code> makes a new commit that undoes the old one,
+    so the history everyone else has stays valid. <code>reset</code> rewrites
+    history, and rewriting history other people are standing on is how you
+    ruin an afternoon for a whole team.
+  </p>
+</div>
+
+<h2>.gitignore</h2>
+
+<pre><code># Dependencies — rebuilt from the lock file
+node_modules/
+
+# Build output — derived from source
+dist/
+
+# The database. Never commit this: it holds real data.
+data/
+
+# Secrets, by definition
+.env</code></pre>
+
+<p>Three rules that cover almost everything:</p>
+
+<ul>
+  <li><strong>Never commit what you can rebuild</strong> — <code>node_modules</code>, <code>dist</code>. It bloats the repository and causes conflicts nobody can resolve.</li>
+  <li><strong>Never commit secrets.</strong> And note that deleting them later does not help: they remain in history, and history is what gets cloned.</li>
+  <li><strong>Do commit the lock file.</strong> <code>package-lock.json</code> is what makes two machines install the same code.</li>
+</ul>
+
+<h2>Line endings</h2>
+
+<p>
+  Windows ends lines with CRLF and everything else with LF. Left alone, a file
+  edited on two machines shows up as every line changed.
+</p>
+
+<pre><code># .gitattributes
+* text=auto eol=lf</code></pre>
+
+<p>
+  Settling it in <code>.gitattributes</code> rather than in each person's
+  config means it applies to everyone who clones. This project has exactly that
+  file, for exactly that reason.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Make a repository and break it</h3>
+  </div>
+  <p>
+    In an empty folder: <code>git init</code>, create a file, commit it. Change
+    it, check <code>git status</code>, then <code>git restore</code> it. Change
+    it again, stage it, then unstage it. Watch what <code>git status</code>
+    says at each step.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>git init
+echo "hello" &gt; notes.txt
+git add notes.txt
+git commit -m "Add notes"
+
+echo "changed" &gt;&gt; notes.txt
+git status                     # "modified: notes.txt", not staged
+git restore notes.txt          # gone; the file is back to the commit
+
+echo "again" &gt;&gt; notes.txt
+git add notes.txt
+git status                     # "modified: notes.txt", staged
+git restore --staged notes.txt # unstaged, but the edit is still there
+git status                     # modified again, not staged</code></pre>
+    <p>
+      The pair worth internalising: <code>restore</code> discards the edit,
+      <code>restore --staged</code> only un-chooses it. One loses work, the
+      other does not.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Stage half a change</h3>
+  </div>
+  <p>
+    Edit two files. Stage only one, and commit it. Confirm with
+    <code>git log</code> and <code>git status</code> that the other is still
+    waiting. Why is this worth being able to do?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      Because you rarely do exactly one thing at a time. You set out to fix a
+      bug, notice a typo, and rename a variable on the way. Committing all
+      three together means that when the bug fix turns out to be wrong, undoing
+      it also undoes the typo fix.
+    </p>
+    <p>
+      <code>git add -p</code> goes further and stages selected <em>hunks</em>
+      within a file, so one file's changes can go into two commits.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Read this project's history</h3>
+  </div>
+  <p>
+    Run <code>git log --oneline</code> in the Tutorial folder. Find the commit
+    that fixed the blank page. Then run <code>git show &lt;hash&gt;</code> on
+    it. Does the message tell you what went wrong without reading the diff?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      It should: the message names the cause (a regex that threw at module
+      load), the symptom (React never mounted), and the reason it went
+      unnoticed (every other check was green). That is the "why, not what"
+      rule — the diff shows a changed line, and only the message can tell you
+      that the change was one word in a regular expression.
+    </p>
+  </details>
+</div>
