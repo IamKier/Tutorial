@@ -1,0 +1,316 @@
+<h1>Components and JSX <span class="tag">Basics</span></h1>
+
+<p class="lead">
+  React does one thing: it keeps the screen in step with your data. You describe
+  what the page should look like for a given state, and React works out which
+  parts of the DOM to change.
+</p>
+
+<h2>What problem it solves</h2>
+
+<p>
+  In the DOM lesson you wrote this pattern by hand — keep the data in one place,
+  write a <code>render()</code> that draws the whole screen from it, and call
+  <code>render()</code> after every change:
+</p>
+
+<pre><code>let tasks = [];
+
+function render() {
+  list.replaceChildren(...tasks.map(taskElement));
+  countEl.textContent = tasks.filter(t =&gt; t.done).length + ' done';
+}
+
+tasks.push(newTask);
+render();</code></pre>
+
+<p>
+  That works, and it is genuinely the right approach at small scale. It has one
+  problem: redrawing everything means the browser rebuilds elements that did not
+  change. With twelve tasks nobody notices. With a thousand rows and a text
+  field the user is typing into, they do.
+</p>
+
+<p>
+  React lets you keep writing in that style — describe the whole screen, every
+  time — while it works out the minimum set of DOM changes needed. That is the
+  entire trade.
+</p>
+
+<h2>A component</h2>
+
+<p>A component is a function that returns markup:</p>
+
+<pre><code>function Greeting() {
+  return &lt;p&gt;Hello&lt;/p&gt;;
+}</code></pre>
+
+<p>
+  Two rules the language enforces: the name must start with a
+  <strong>capital letter</strong> — that is how React tells your components from
+  built-in tags like <code>&lt;p&gt;</code> — and it must return a single root
+  element.
+</p>
+
+<h2>JSX is not HTML</h2>
+
+<p>
+  That <code>&lt;p&gt;Hello&lt;/p&gt;</code> is JSX, and no browser can run it.
+  A build step compiles it into ordinary function calls:
+</p>
+
+<pre><code>// what you write
+&lt;p className="lead"&gt;Hello&lt;/p&gt;
+
+// what the browser actually receives
+React.createElement('p', { className: 'lead' }, 'Hello')</code></pre>
+
+<p>
+  Knowing that explains most of JSX's oddities. It is JavaScript, so the
+  attribute names are the DOM's property names rather than HTML's:
+</p>
+
+<table>
+  <thead>
+    <tr><th>HTML</th><th>JSX</th><th>Why</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>class</code></td><td><code>className</code></td><td><code>class</code> is a reserved word</td></tr>
+    <tr><td><code>for</code></td><td><code>htmlFor</code></td><td>so is <code>for</code></td></tr>
+    <tr><td><code>onclick</code></td><td><code>onClick</code></td><td>JavaScript is camelCase</td></tr>
+    <tr><td><code>tabindex</code></td><td><code>tabIndex</code></td><td>same</td></tr>
+    <tr><td><code>style="color:red"</code></td><td><code>style={{ color: 'red' }}</code></td><td>an object, not a string</td></tr>
+  </tbody>
+</table>
+
+<h3>Braces put JavaScript inside markup</h3>
+
+<pre><code>function Greeting() {
+  const name = 'Kier';
+  const hour = 9;
+
+  return (
+    &lt;div&gt;
+      &lt;p&gt;Hello, {name}&lt;/p&gt;
+      &lt;p&gt;You have {2 + 3} tasks&lt;/p&gt;
+      &lt;p&gt;{hour &lt; 12 ? 'Good morning' : 'Good afternoon'}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+<p>
+  Anything inside <code>{ }</code> is an expression — a value, not a statement.
+  You cannot put an <code>if</code> or a <code>for</code> loop there, which is
+  why conditions use the ternary <code>? :</code> and lists use
+  <code>.map()</code>.
+</p>
+
+<div class="callout callout--tip">
+  <span class="callout__title">React escapes what you interpolate</span>
+  <p>
+    <code>{task.title}</code> is inserted as <em>text</em>, always. A task
+    called <code>&lt;img src=x onerror=alert(1)&gt;</code> is shown, not run.
+    This is the one real security improvement React gives you over hand-written
+    DOM code: the safe behaviour is the default, and you have to go out of your
+    way — with <code>dangerouslySetInnerHTML</code> — to lose it.
+  </p>
+</div>
+
+<h2>Props</h2>
+
+<p>
+  Props are the arguments a component receives. They flow one way: parent to
+  child, never back up.
+</p>
+
+<pre><code>function TaskRow({ title, done }) {
+  return (
+    &lt;li className={done ? 'task is-done' : 'task'}&gt;
+      {title}
+    &lt;/li&gt;
+  );
+}
+
+// used as
+&lt;TaskRow title="Buy milk" done={false} /&gt;</code></pre>
+
+<p>
+  Note the destructuring in the parameter list — <code>{ title, done }</code>.
+  React passes one object; pulling the fields out there saves writing
+  <code>props.</code> everywhere.
+</p>
+
+<p>
+  Note also the two kinds of value: <code>title="Buy milk"</code> passes a
+  string, and <code>done={false}</code> passes a real boolean. Quotes mean a
+  string; braces mean a JavaScript value.
+</p>
+
+<h2>Lists</h2>
+
+<pre><code>function TaskList({ tasks }) {
+  return (
+    &lt;ul&gt;
+      {tasks.map((task) =&gt; (
+        &lt;TaskRow key={task.id} title={task.title} done={task.done} /&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">key is not optional, and the index is not a key</span>
+  <p>
+    <code>key</code> is how React tells one item from another between renders.
+    Without it you get a console warning; with the array index instead of a
+    stable id, you get something worse — React reuses the wrong element when the
+    list is filtered, sorted or has an item removed.
+  </p>
+  <p>
+    The classic symptom: you tick a checkbox and a <em>different</em> row ticks.
+    Use an id that belongs to the data.
+  </p>
+</div>
+
+<h2>Conditional rendering</h2>
+
+<pre><code>{error &amp;&amp; &lt;p className="error"&gt;{error}&lt;/p&gt;}
+
+{isDone ? &lt;span&gt;Done&lt;/span&gt; : &lt;span&gt;Not done&lt;/span&gt;}
+
+{tasks.length === 0 &amp;&amp; &lt;EmptyState /&gt;}</code></pre>
+
+<p>
+  <code>&amp;&amp;</code> works because React ignores <code>false</code>,
+  <code>null</code> and <code>undefined</code> — it renders nothing for them.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The zero trap</span>
+  <p>
+    <code>{tasks.length &amp;&amp; &lt;List /&gt;}</code> renders a literal
+    <strong>0</strong> on the page when the array is empty, because
+    <code>0</code> is falsy but is <em>not</em> one of the values React skips.
+    Compare explicitly: <code>tasks.length &gt; 0 &amp;&amp; …</code>
+  </p>
+</div>
+
+<h2>Composition</h2>
+
+<p>Components nest, and that is how a page is built:</p>
+
+<pre><code>function App() {
+  return (
+    &lt;&gt;
+      &lt;Header /&gt;
+      &lt;TaskList tasks={tasks} /&gt;
+      &lt;Footer /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+<p>
+  <code>&lt;&gt;…&lt;/&gt;</code> is a fragment: a wrapper that satisfies the
+  one-root-element rule without adding a real <code>&lt;div&gt;</code> to the
+  page. Reach for it whenever a wrapper element would only exist to keep React
+  happy.
+</p>
+
+<h2>Where this lives in the project</h2>
+
+<p>
+  Open <code>client/src/library/TopicPage.jsx</code>. It is a single component:
+  it takes props, computes a couple of values, maps over lessons with a
+  <code>key</code>, and returns markup. Nothing else.
+</p>
+
+<p>
+  Then open <code>client/src/components/Icon.jsx</code>, which is smaller still
+  — a lookup table of SVG paths and a component that picks one. A component does
+  not have to be big to be worth extracting.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Translate to JSX</h3>
+  </div>
+  <p>Rewrite this HTML as a component called <code>Card</code>:</p>
+<pre><code>&lt;div class="card"&gt;
+  &lt;label for="name"&gt;Name&lt;/label&gt;
+  &lt;input id="name" tabindex="0" style="width: 100%"&gt;
+  &lt;button onclick="save()"&gt;Save&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>function Card({ onSave }) {
+  return (
+    &lt;div className="card"&gt;
+      &lt;label htmlFor="name"&gt;Name&lt;/label&gt;
+      &lt;input id="name" tabIndex={0} style={{ width: '100%' }} /&gt;
+      &lt;button onClick={onSave}&gt;Save&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+    <p>
+      Five changes, and each is JSX being JavaScript rather than HTML:
+      <code>className</code>, <code>htmlFor</code>, <code>tabIndex</code> as a
+      number, <code>style</code> as an object, and <code>onClick</code> taking a
+      function rather than a string of code.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Spot the bugs</h3>
+  </div>
+  <p>Three things are wrong here. Find them before reading on.</p>
+<pre><code>function taskList({ tasks }) {
+  return (
+    &lt;ul&gt;
+      {tasks.map((task, i) =&gt; (
+        &lt;li key={i} class="task"&gt;{task.title}&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><strong>Lowercase name.</strong> <code>taskList</code> is treated as an HTML tag, not a component. It must be <code>TaskList</code>.</li>
+      <li><strong><code>class</code> instead of <code>className</code>.</strong> React warns, and the styling silently does not apply.</li>
+      <li><strong><code>key={i}</code>.</strong> The array index is not stable — remove the first task and every remaining key shifts, so React reuses the wrong elements. Use <code>key={task.id}</code>.</li>
+    </ol>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Prove the zero trap</h3>
+  </div>
+  <p>
+    In a component, render <code>{items.length &amp;&amp; &lt;p&gt;Has
+    items&lt;/p&gt;}</code> with an empty array. What appears on the page, and
+    why is <code>{items.length &gt; 0 &amp;&amp; …}</code> different?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      A literal <strong>0</strong> appears. <code>&amp;&amp;</code> returns its
+      left operand when that operand is falsy, so the expression evaluates to
+      the number <code>0</code> — and React renders numbers. It only skips
+      <code>false</code>, <code>null</code>, <code>undefined</code> and
+      <code>true</code>.
+    </p>
+    <p>
+      <code>items.length &gt; 0</code> evaluates to <code>false</code>, which
+      React skips. This is the single most common visual bug in React code, and
+      it always looks like a stray zero nobody can account for.
+    </p>
+  </details>
+</div>

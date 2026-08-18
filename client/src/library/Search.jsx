@@ -4,7 +4,7 @@
 //
 // Searching titles alone is nearly useless in a library: you remember a phrase
 // from the middle of a lesson, not its heading. So this searches the full text
-// of all fifteen.
+// of every one.
 //
 // It builds the index lazily — nothing is fetched until you actually open
 // search for the first time. Twenty thousand words is small enough to hold in
@@ -48,8 +48,8 @@ export function Search({ open, onClose }) {
 
     let cancelled = false;
 
-    // All fifteen at once rather than one after another: fifteen requests in
-    // sequence would take fifteen round trips instead of one.
+    // All of them at once rather than one after another: eighteen requests in
+    // sequence would take eighteen round trips instead of one.
     Promise.all(
       LESSONS.map(async (lesson) => {
         const response = await fetch(`/lessons/${lesson.slug}.html`);

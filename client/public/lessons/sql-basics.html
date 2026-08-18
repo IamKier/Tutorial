@@ -1,0 +1,373 @@
+<h1>SQL and SQLite <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  SQL has outlasted every framework built on top of it, and it will outlast the
+  current ones. An afternoon spent on it pays back for the rest of your career.
+</p>
+
+<h2>Why a database, and why this one</h2>
+
+<p>
+  The data lesson ended with a JSON file and four problems: it rewrites
+  everything to change one field, it cannot search without loading the lot, two
+  simultaneous writes lose data, and a crash mid-write leaves a file that will
+  not parse.
+</p>
+
+<p>
+  This project now uses <strong>SQLite</strong>, which fixes all four and is
+  built into Node 24 — so it is still not an npm dependency.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">SQLite is not a toy</span>
+  <p>
+    It is the most widely deployed database in the world: every phone, every
+    browser, most desktop software. Plenty of production web services run on it
+    happily. You need a database <em>server</em> like Postgres when you need
+    several application servers talking to one database — not before.
+  </p>
+</div>
+
+<h2>Tables</h2>
+
+<p>
+  A table is rows and columns, and every column has a type declared up front.
+  That is the first real difference from a JSON file: the shape is enforced.
+</p>
+
+<pre><code>CREATE TABLE tasks (
+  id        TEXT PRIMARY KEY,
+  title     TEXT NOT NULL,
+  done      INTEGER NOT NULL DEFAULT 0,
+  dueAt     TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);</code></pre>
+
+<p>Reading that line by line:</p>
+
+<ul>
+  <li><code>PRIMARY KEY</code> — unique, and the row's identity. One per table.</li>
+  <li><code>NOT NULL</code> — the database refuses a row without it. A constraint here is worth ten checks in application code, because it cannot be forgotten.</li>
+  <li><code>DEFAULT 0</code> — what to use when the column is not supplied.</li>
+  <li><code>dueAt</code> has no <code>NOT NULL</code>, so it may be <code>NULL</code> — which is how "no due date" is expressed.</li>
+</ul>
+
+<h3>SQLite's types are unusual</h3>
+
+<p>
+  There are only five: <code>NULL</code>, <code>INTEGER</code>,
+  <code>REAL</code>, <code>TEXT</code>, <code>BLOB</code>. Notably missing:
+</p>
+
+<ul>
+  <li><strong>No boolean.</strong> Use <code>INTEGER</code> with 0 and 1, and convert at the boundary — see below.</li>
+  <li><strong>No date type.</strong> Store ISO strings: they sort correctly as text and are unambiguous about time zone.</li>
+</ul>
+
+<h2>The four statements</h2>
+
+<pre><code>-- Read
+SELECT * FROM tasks;
+SELECT id, title FROM tasks WHERE done = 0;
+SELECT * FROM tasks ORDER BY createdAt DESC LIMIT 10;
+
+-- Create
+INSERT INTO tasks (id, title, done, createdAt, updatedAt)
+VALUES ('a1', 'Buy milk', 0, '2026-08-18T09:00:00Z', '2026-08-18T09:00:00Z');
+
+-- Update
+UPDATE tasks SET done = 1, updatedAt = '2026-08-18T10:00:00Z' WHERE id = 'a1';
+
+-- Delete
+DELETE FROM tasks WHERE id = 'a1';</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">UPDATE and DELETE without WHERE hit every row</span>
+  <p>
+    <code>DELETE FROM tasks;</code> empties the table. There is no confirmation
+    and no undo. Write the <code>WHERE</code> clause first, run it as a
+    <code>SELECT</code> to see what it matches, and only then change the verb.
+  </p>
+</div>
+
+<h3>Filtering</h3>
+
+<pre><code>WHERE done = 0
+WHERE title LIKE '%milk%'          -- % matches any run of characters
+WHERE dueAt IS NULL                -- NOT "= NULL", which is never true
+WHERE dueAt &lt; '2026-09-01'
+WHERE done = 0 AND dueAt IS NOT NULL
+WHERE id IN ('a1', 'a2', 'a3')</code></pre>
+
+<p>
+  <code>IS NULL</code> rather than <code>= NULL</code> catches everyone once.
+  <code>NULL</code> means "unknown", and comparing an unknown to anything —
+  including another unknown — yields unknown, never true.
+</p>
+
+<h3>Counting and grouping</h3>
+
+<pre><code>SELECT COUNT(*) AS n FROM tasks;
+SELECT COUNT(*) AS n FROM tasks WHERE done = 1;
+
+SELECT done, COUNT(*) AS n FROM tasks GROUP BY done;
+-- done | n
+--    0 | 7
+--    1 | 3</code></pre>
+
+<p>
+  That last one is the shape of most reporting: group by something, count within
+  each group. Doing it in SQL rather than by loading every row and counting in
+  JavaScript is the difference between a database and a file.
+</p>
+
+<h2>Placeholders, and why they are not optional</h2>
+
+<pre><code>// ❌ NEVER do this
+db.prepare(`SELECT * FROM tasks WHERE title = '${input}'`);
+
+// ✅ a placeholder
+db.prepare('SELECT * FROM tasks WHERE title = ?').all(input);</code></pre>
+
+<p>
+  With the first version, an input of <code>' OR 1=1 --</code> makes the query
+  read <code>WHERE title = '' OR 1=1 --'</code>, which matches every row. Worse
+  inputs drop tables or read other ones.
+</p>
+
+<p>
+  A placeholder is not string-escaping. The value is sent to the database
+  separately from the statement, so it is <em>data</em> and can never be parsed
+  as SQL — no matter what is in it. This is SQL injection, it is the oldest
+  trick in the book, and it still works on new code every week.
+</p>
+
+<h2>Using it from Node</h2>
+
+<pre><code>import { DatabaseSync } from 'node:sqlite';
+
+const db = new DatabaseSync('data/app.db');
+
+// Prepared ONCE, at module load, and reused for every call.
+// Preparing parses and plans the query; doing it per request throws
+// that work away every time.
+const selectAll = db.prepare('SELECT * FROM tasks ORDER BY createdAt DESC');
+const insertOne = db.prepare(
+  'INSERT INTO tasks (id, title, done, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)'
+);
+
+selectAll.all();              // every row
+selectAll.get();              // the first row, or undefined
+insertOne.run(id, title, 0, now, now);   // { changes, lastInsertRowid }</code></pre>
+
+<h3>Converting at the boundary</h3>
+
+<pre><code>function toTask(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    done: row.done === 1,      // INTEGER -> real boolean
+    dueAt: row.dueAt,
+    createdAt: row.createdAt,
+  };
+}</code></pre>
+
+<p>
+  Do this once, where the data enters the application, and nothing above ever
+  sees a number pretending to be a boolean. Skip it and
+  <code>JSON.stringify</code> sends <code>0</code> to a checkbox that expects
+  <code>false</code>.
+</p>
+
+<h2>Settings that matter</h2>
+
+<pre><code>db.exec('PRAGMA journal_mode = WAL');
+db.exec('PRAGMA foreign_keys = ON');
+db.exec('PRAGMA busy_timeout = 5000');</code></pre>
+
+<ul>
+  <li><strong>WAL</strong> — write-ahead logging. Readers no longer block the writer and the writer no longer blocks readers. The single most valuable SQLite setting for a web app.</li>
+  <li><strong>foreign_keys</strong> — <em>off by default</em>, for backwards compatibility. Without it, <code>REFERENCES</code> and <code>ON DELETE CASCADE</code> are decorative.</li>
+  <li><strong>busy_timeout</strong> — wait for a lock instead of failing instantly.</li>
+</ul>
+
+<h2>Indexes</h2>
+
+<pre><code>CREATE INDEX idx_tasks_created ON tasks(createdAt DESC);</code></pre>
+
+<p>
+  Without an index, finding rows means reading every one. With it, the database
+  keeps a sorted structure it can jump into.
+</p>
+
+<p>
+  Index the columns you filter and sort by — and no more. Every index has to be
+  updated on every write, so indexing everything makes writes slower to speed up
+  queries you never run.
+</p>
+
+<h2>Migrations</h2>
+
+<p>
+  The schema changes as the app grows, and those changes have to reach every
+  copy of the database in the same order. SQLite keeps an integer in the file
+  for exactly this:
+</p>
+
+<pre><code>const MIGRATIONS = [
+  () =&gt; db.exec('CREATE TABLE tasks (...)'),
+  () =&gt; db.exec('ALTER TABLE tasks ADD COLUMN dueAt TEXT'),
+];
+
+const { user_version: current } = db.prepare('PRAGMA user_version').get();
+
+for (let v = current; v &lt; MIGRATIONS.length; v++) {
+  db.exec('BEGIN');
+  try {
+    MIGRATIONS[v]();
+    db.exec(`PRAGMA user_version = ${v + 1}`);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Never edit a migration that has already run</span>
+  <p>
+    It will not re-run on a database that already applied it. Your machine and
+    everyone else's then hold different schemas while claiming the same version
+    — and the failure appears somewhere unrelated, weeks later.
+  </p>
+  <p>Always add a new one. <code>src/db/index.js</code> has a worked example: migration 1 creates a <code>users</code> table that migration 2 drops, and migration 1 was left exactly as it was.</p>
+</div>
+
+<h3>Transactions</h3>
+
+<p>
+  <code>BEGIN</code> … <code>COMMIT</code> makes several statements one
+  all-or-nothing unit; <code>ROLLBACK</code> undoes them. A migration that
+  half-applied is the worst state to debug, which is why each one is wrapped.
+</p>
+
+<p>
+  The same applies in application code: moving a task between projects means two
+  writes, and a crash between them leaves the data inconsistent unless they are
+  in one transaction.
+</p>
+
+<h2>Where this lives in the project</h2>
+
+<ul>
+  <li><code>src/db/index.js</code> — the connection, the pragmas, the migrations.</li>
+  <li><code>src/db/tasks.js</code> — every query, prepared once, all values as placeholders.</li>
+</ul>
+
+<p>
+  Nothing outside those two files writes SQL. That is what makes moving to
+  Postgres a rewrite of one directory rather than of the whole application.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Write the queries</h3>
+  </div>
+  <p>Against the <code>tasks</code> table above, write SQL for each:</p>
+  <ol>
+    <li>Every unfinished task, newest first</li>
+    <li>How many tasks are overdue (a <code>dueAt</code> in the past, not done)</li>
+    <li>Every task whose title mentions "report"</li>
+    <li>Mark every task due before today as done</li>
+    <li>Tasks with no due date set</li>
+  </ol>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>SELECT * FROM tasks WHERE done = 0 ORDER BY createdAt DESC;
+
+SELECT COUNT(*) AS n FROM tasks
+  WHERE done = 0 AND dueAt IS NOT NULL AND dueAt &lt; ?;
+
+SELECT * FROM tasks WHERE title LIKE '%report%';
+
+UPDATE tasks SET done = 1, updatedAt = ? WHERE dueAt &lt; ? AND done = 0;
+
+SELECT * FROM tasks WHERE dueAt IS NULL;</code></pre>
+    <p>
+      Note the <code>?</code> for every date rather than a literal. Even a value
+      you generated yourself goes through a placeholder — it costs nothing and
+      removes the question of whether this particular string was safe.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Break it with an apostrophe</h3>
+  </div>
+  <p>
+    In the running app, add a task called <code>Kier's report</code>. It works.
+    Now explain why it would <em>not</em> work if <code>src/db/tasks.js</code>
+    built its SQL with a template literal — and what an attacker would send
+    instead.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      With a template literal the statement becomes
+      <code>… title = 'Kier's report'</code>. The apostrophe closes the string
+      early, the rest is read as SQL, and it fails to parse — so an ordinary
+      name breaks the app.
+    </p>
+    <p>
+      That syntax error is the same door an attacker walks through deliberately.
+      <code>'; DROP TABLE tasks; --</code> closes the string, ends the
+      statement, starts a new one, and comments out whatever followed.
+    </p>
+    <p>
+      The lesson worth taking: the input that reveals the hole is usually not an
+      attack. It is a customer called O'Brien.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Add a column properly</h3>
+  </div>
+  <p>
+    Add a <code>priority</code> column with a default of <code>'normal'</code>.
+    Write the migration, apply it, and then answer: what do existing rows
+    contain, and what would have happened if you had edited migration 1 instead?
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>// A NEW entry appended to MIGRATIONS — never an edit to an existing one.
+() =&gt; {
+  db.exec(`
+    ALTER TABLE tasks
+      ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal'
+  `);
+},</code></pre>
+    <p>
+      Existing rows get <code>'normal'</code>, because a <code>DEFAULT</code> on
+      <code>ADD COLUMN</code> is applied to every row already there. Without the
+      default they would get <code>NULL</code>, and <code>NOT NULL</code> would
+      make SQLite refuse the change outright.
+    </p>
+    <p>
+      Editing migration 1 would have worked perfectly on a fresh database and
+      done nothing at all on yours — the file already reports version 1, so that
+      migration never runs again. You would have two schemas both claiming to be
+      version 1.
+    </p>
+  </details>
+</div>

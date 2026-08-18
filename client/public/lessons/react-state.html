@@ -1,0 +1,373 @@
+<h1>State, effects and hooks <span class="tag tag--intermediate">Intermediate</span></h1>
+
+<p class="lead">
+  Components that only display props are easy. The interesting part is
+  remembering things, reacting to changes, and talking to a server — which in
+  React means hooks.
+</p>
+
+<h2>useState</h2>
+
+<pre><code>import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    &lt;button onClick={() =&gt; setCount(count + 1)}&gt;
+      Clicked {count} times
+    &lt;/button&gt;
+  );
+}</code></pre>
+
+<p>
+  <code>useState</code> returns a pair: the current value, and a function to
+  change it. Calling that function does two things — it stores the new value,
+  and it tells React to render this component again.
+</p>
+
+<p>That second part is the whole point. This does nothing:</p>
+
+<pre><code>let count = 0;              // ❌ React does not know this changed
+count = count + 1;          //    and nothing on screen updates</code></pre>
+
+<h3>State updates are not immediate</h3>
+
+<pre><code>function handleClick() {
+  setCount(count + 1);
+  console.log(count);       // still the OLD value
+}</code></pre>
+
+<p>
+  <code>count</code> is a value captured when this render ran. Calling
+  <code>setCount</code> schedules the next render; it does not reach back and
+  change the variable you are holding. The new value arrives as a fresh
+  <code>count</code> next time the function runs.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Two updates in a row</span>
+  <p>
+    <code>setCount(count + 1); setCount(count + 1);</code> adds
+    <strong>one</strong>, not two — both read the same stale
+    <code>count</code>. When the next value depends on the previous one, pass a
+    function instead:
+  </p>
+  <pre><code>setCount((current) =&gt; current + 1);
+setCount((current) =&gt; current + 1);   // now it adds two</code></pre>
+</div>
+
+<h3>Never mutate state</h3>
+
+<pre><code>// ❌ nothing re-renders
+tasks.push(newTask);
+setTasks(tasks);
+
+// ✅ a new array
+setTasks([...tasks, newTask]);
+
+// ✅ replacing one item
+setTasks(tasks.map((t) =&gt; (t.id === id ? updated : t)));
+
+// ✅ removing one
+setTasks(tasks.filter((t) =&gt; t.id !== id));</code></pre>
+
+<p>
+  React decides whether to re-render by comparing the old value with the new one
+  by <em>identity</em>. Push into the existing array and it is still the same
+  array, so React concludes nothing happened. This is the most common React bug
+  there is, and it fails silently: the data really did change, and the screen
+  simply does not agree.
+</p>
+
+<h2>Controlled inputs</h2>
+
+<pre><code>const [title, setTitle] = useState('');
+
+&lt;input value={title} onChange={(e) =&gt; setTitle(e.target.value)} /&gt;</code></pre>
+
+<p>
+  The input's value comes from state, and every keystroke goes through
+  <code>onChange</code> to update it. The field cannot show anything the state
+  does not contain, which means there is one answer to "what did the user type"
+  rather than two that can disagree.
+</p>
+
+<h2>useEffect</h2>
+
+<p>
+  Rendering should be pure: same props and state, same markup, no side effects.
+  Fetching data, setting a timer, adding a listener — all of that goes in an
+  effect, which runs <em>after</em> the render.
+</p>
+
+<pre><code>useEffect(() =&gt; {
+  document.title = `${count} clicks`;
+}, [count]);</code></pre>
+
+<p>The second argument is the dependency array, and it decides how often the effect runs:</p>
+
+<table>
+  <thead>
+    <tr><th>Written as</th><th>Runs</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>useEffect(fn)</code></td><td>after every render — rarely what you want</td></tr>
+    <tr><td><code>useEffect(fn, [])</code></td><td>once, after the first render</td></tr>
+    <tr><td><code>useEffect(fn, [a, b])</code></td><td>when <code>a</code> or <code>b</code> changes</td></tr>
+  </tbody>
+</table>
+
+<h3>Cleanup</h3>
+
+<p>Return a function and React runs it before the next effect, and on unmount:</p>
+
+<pre><code>useEffect(() =&gt; {
+  const onResize = () =&gt; setWidth(window.innerWidth);
+  window.addEventListener('resize', onResize);
+
+  return () =&gt; window.removeEventListener('resize', onResize);
+}, []);</code></pre>
+
+<p>
+  Skip the cleanup and every mount adds another listener, all of them still
+  firing. Timers, subscriptions and observers are the same story.
+</p>
+
+<h3>Fetching</h3>
+
+<pre><code>useEffect(() =&gt; {
+  let cancelled = false;
+
+  fetch(`/lessons/${slug}.html`)
+    .then((r) =&gt; r.text())
+    .then((text) =&gt; {
+      if (!cancelled) setHtml(text);
+    });
+
+  return () =&gt; {
+    cancelled = true;
+  };
+}, [slug]);</code></pre>
+
+<p>
+  The <code>cancelled</code> flag matters more than it looks. Click quickly
+  between two lessons and both requests are in flight; without the flag,
+  whichever finishes <em>last</em> wins — which may be the one you navigated
+  away from. That is a race condition, and it shows up as content that does not
+  match the page you are on.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">Why effects run twice in development</span>
+  <p>
+    <code>&lt;StrictMode&gt;</code> deliberately mounts each component, unmounts
+    it and mounts it again. It looks like a bug the first time you see two
+    identical requests in the Network tab. It is React checking that your
+    cleanup works — an effect that cannot survive being run twice has a bug that
+    would eventually appear in production anyway.
+  </p>
+  <p>It does not happen in the production build.</p>
+</div>
+
+<h2>useMemo and useCallback</h2>
+
+<pre><code>// Recompute only when tasks changes
+const stats = useMemo(() =&gt; ({
+  total: tasks.length,
+  done: tasks.filter((t) =&gt; t.done).length,
+}), [tasks]);
+
+// Keep the same function identity between renders
+const onError = useCallback((message) =&gt; show(message), [show]);</code></pre>
+
+<p>
+  Both are caches. <code>useMemo</code> remembers a value;
+  <code>useCallback</code> remembers a function.
+</p>
+
+<p>
+  Reach for them when a calculation is genuinely expensive, or when a function
+  is passed to a child that would otherwise re-render for no reason. Wrapping
+  everything is a real cost — the comparison is not free, and the code gets
+  harder to read for no measurable gain.
+</p>
+
+<h2>useRef</h2>
+
+<pre><code>const inputRef = useRef(null);
+
+&lt;input ref={inputRef} /&gt;
+&lt;button onClick={() =&gt; inputRef.current.focus()}&gt;Focus&lt;/button&gt;</code></pre>
+
+<p>Two uses, and they are less different than they look:</p>
+
+<ul>
+  <li><strong>Reaching a DOM element</strong> — to focus it, measure it, or scroll to it.</li>
+  <li><strong>Holding a value that must survive renders without causing one</strong> — a timer id, for instance. The screen does not depend on it, so putting it in state would trigger pointless re-renders.</li>
+</ul>
+
+<h2>useLayoutEffect</h2>
+
+<p>
+  The same as <code>useEffect</code>, except it runs before the browser paints
+  rather than after.
+</p>
+
+<pre><code>useLayoutEffect(() =&gt; {
+  article.innerHTML = html;
+  setHeadings(enhance(article));
+}, [html]);</code></pre>
+
+<p>
+  That is from <code>client/src/library/LessonPage.jsx</code>. With
+  <code>useEffect</code> the reader saw one frame of raw, unhighlighted markup
+  before it changed under them.
+</p>
+
+<p>
+  The rule: if an effect measures or rewrites the DOM and the difference would
+  be visible, use <code>useLayoutEffect</code>. Everything else belongs in
+  <code>useEffect</code>, which does not hold up painting.
+</p>
+
+<h2>Custom hooks</h2>
+
+<p>
+  A custom hook is just a function whose name begins with <code>use</code> and
+  which calls other hooks. That is the entire rule.
+</p>
+
+<pre><code>function useProgress() {
+  const [done, setDone] = useState(load);
+
+  useEffect(() =&gt; {
+    localStorage.setItem(KEY, JSON.stringify([...done]));
+  }, [done]);
+
+  const toggle = useCallback((slug) =&gt; {
+    setDone((current) =&gt; {
+      const next = new Set(current);   // a NEW Set, not a mutated one
+      next.has(slug) ? next.delete(slug) : next.add(slug);
+      return next;
+    });
+  }, []);
+
+  return { done, toggle };
+}</code></pre>
+
+<p>
+  They exist so stateful logic can be reused, and so components stay about what
+  is on screen rather than how it got there. In this project
+  <code>useTasks</code> owns the task list and every operation on it, which is
+  why <code>TasksPage.jsx</code> reads as a description of a screen.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The rules of hooks</span>
+  <p>
+    Call hooks at the <strong>top level</strong> of a component or another hook
+    — never inside a condition, a loop or a nested function. React matches state
+    to hooks by call order, so a hook that sometimes runs shifts every hook
+    after it onto the wrong state.
+  </p>
+</div>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Why does this only add one?</h3>
+  </div>
+<pre><code>function handleClick() {
+  setCount(count + 1);
+  setCount(count + 1);
+  setCount(count + 1);
+}</code></pre>
+  <p>Explain it, then fix it so the count goes up by three.</p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      All three calls read the same <code>count</code> — the value captured when
+      this render ran. If it is 0, all three schedule "set it to 1".
+    </p>
+<pre><code>setCount((c) =&gt; c + 1);
+setCount((c) =&gt; c + 1);
+setCount((c) =&gt; c + 1);</code></pre>
+    <p>
+      The function form receives the latest pending value rather than the one
+      from render time, so the updates stack.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Find the leak</h3>
+  </div>
+<pre><code>useEffect(() =&gt; {
+  const id = setInterval(() =&gt; setNow(Date.now()), 1000);
+}, []);</code></pre>
+  <p>What goes wrong, and when would you notice?</p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      The interval is never cleared, so it keeps firing after the component is
+      gone — calling <code>setNow</code> on something that no longer exists.
+      Navigate back and forth ten times and there are ten intervals running.
+    </p>
+<pre><code>useEffect(() =&gt; {
+  const id = setInterval(() =&gt; setNow(Date.now()), 1000);
+  return () =&gt; clearInterval(id);
+}, []);</code></pre>
+    <p>
+      You would notice late: it does not crash, it just gradually uses more CPU.
+      This is exactly the class of bug StrictMode's double-mounting is designed
+      to surface early.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Write a custom hook</h3>
+  </div>
+  <p>
+    Write <code>useLocalStorage(key, initial)</code> that behaves like
+    <code>useState</code> but survives a reload. It must not throw in private
+    browsing, where <code>localStorage</code> can be unavailable.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>function useLocalStorage(key, initial) {
+  // A function passed to useState runs once, on the first render only.
+  // useState(JSON.parse(...)) would read storage on every render.
+  const [value, setValue] = useState(() =&gt; {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved !== null ? JSON.parse(saved) : initial;
+    } catch {
+      return initial;
+    }
+  });
+
+  useEffect(() =&gt; {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Private browsing, or the quota is full. Losing a saved preference
+      // is not worth breaking the page over.
+    }
+  }, [key, value]);
+
+  return [value, setValue];
+}</code></pre>
+    <p>
+      Compare it with <code>client/src/hooks/useProgress.js</code>, which is the
+      same shape with a Set instead of a plain value.
+    </p>
+  </details>
+</div>

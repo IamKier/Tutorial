@@ -26,7 +26,7 @@ export const TOPICS = [
     title: 'Start here',
     tagline: 'How the library works and how to use it',
     icon: 'compass',
-    lessons: [{ slug: 'welcome', title: 'How this works', level: 'Basics', words: 577 }],
+    lessons: [{ slug: 'welcome', title: 'How this works', level: 'Basics', words: 647 }],
   },
   {
     id: 'html',
@@ -77,6 +77,21 @@ export const TOPICS = [
     ],
   },
   {
+    id: 'react',
+    title: 'React',
+    tagline: 'Letting a framework keep the screen in step with your data',
+    icon: 'layers',
+    lessons: [
+      { slug: 'react-basics', title: 'Components and JSX', level: 'Basics', words: 1092 },
+      {
+        slug: 'react-state',
+        title: 'State, effects and hooks',
+        level: 'Intermediate',
+        words: 1412,
+      },
+    ],
+  },
+  {
     id: 'web',
     title: 'How the web works',
     tagline: 'What actually travels between browser and server',
@@ -107,6 +122,7 @@ export const TOPICS = [
         level: 'Intermediate',
         words: 1642,
       },
+      { slug: 'sql-basics', title: 'SQL and SQLite', level: 'Intermediate', words: 1692 },
     ],
   },
   {
@@ -136,9 +152,11 @@ export const LESSONS = TOPICS.flatMap((topic) =>
     ...lesson,
     topicId: topic.id,
     topicTitle: topic.title,
-    // 200 words a minute is the usual estimate for ordinary prose. Code
-    // examples are slower to read, so this errs low on purpose — better to
-    // finish sooner than expected.
+    // 200 words a minute is the usual estimate for ordinary prose. Technical
+    // writing with code examples is read more slowly than that — perhaps 120 —
+    // so these figures err low. Better that a lesson takes a little longer
+    // than advertised than that the whole library looks like a day of work
+    // and nobody starts it.
     minutes: Math.max(1, Math.round(lesson.words / 200)),
   }))
 );

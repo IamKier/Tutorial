@@ -1,6 +1,6 @@
 # Fullstack Library
 
-A web-based study library for fullstack development: 15 lessons, around five
+A web-based study library for fullstack development: 18 lessons, around two
 hours of reading, with exercises at the end of each. Browse by topic, search
 every word of every lesson, and track what you have read.
 
