@@ -1,0 +1,286 @@
+<h1>Closures, prototypes and the event loop <span class="tag tag--expert">Expert</span></h1>
+
+<p class="lead">
+  Three mechanisms that explain most of JavaScript's surprising behaviour. You
+  can write code for years without naming them — and every hour spent debugging
+  something baffling is usually one of these.
+</p>
+
+<h2>Closures</h2>
+
+<p>
+  A function remembers the variables it was created next to, even after that
+  code has finished running.
+</p>
+
+<pre><code>function counter() {
+  let count = 0;                    // local to this call
+
+  return () =&gt; ++count;             // but this keeps it alive
+}
+
+const next = counter();
+next();   // 1
+next();   // 2</code></pre>
+
+<p>
+  <code>count</code> should have gone when <code>counter()</code> returned.
+  It does not, because the returned function still refers to it — so the
+  <em>scope</em> survives, not just the value.
+</p>
+
+<h3>The bug everyone meets</h3>
+
+<pre><code>for (var i = 0; i &lt; 3; i++) {
+  setTimeout(() =&gt; console.log(i), 0);
+}
+// 3, 3, 3</code></pre>
+
+<p>
+  <code>var</code> is function-scoped, so all three callbacks close over
+  <strong>the same</strong> <code>i</code>. By the time they run, the loop has
+  finished and it is 3.
+</p>
+
+<pre><code>for (let i = 0; i &lt; 3; i++) {
+  setTimeout(() =&gt; console.log(i), 0);
+}
+// 0, 1, 2</code></pre>
+
+<p>
+  <code>let</code> is block-scoped and the loop creates a <em>fresh binding
+  each iteration</em>, so each callback closes over its own. This is the single
+  best argument for never using <code>var</code>.
+</p>
+
+<h3>The same bug in React</h3>
+
+<pre><code>useEffect(() =&gt; {
+  const id = setInterval(() =&gt; setCount(count + 1), 1000);
+  return () =&gt; clearInterval(id);
+}, []);        // count is captured once, and stays 0 forever</code></pre>
+
+<p>
+  The empty dependency array means the effect runs once, so the callback closes
+  over the <code>count</code> from the first render. It reads 0 every second
+  and sets 1 every second.
+</p>
+
+<pre><code>setCount((c) =&gt; c + 1);   // no capture: React supplies the latest</code></pre>
+
+<p>
+  This is what people mean by a <strong>stale closure</strong>, and it is the
+  most common genuinely hard React bug — because nothing errors and the code
+  reads correctly.
+</p>
+
+<h2>Prototypes</h2>
+
+<p>
+  JavaScript has no classes underneath. Every object has a hidden link to
+  another object, and a property that is missing is looked for along that
+  chain.
+</p>
+
+<pre><code>const task = { title: 'Buy milk' };
+
+task.toString;    // not on task — found on Object.prototype
+task.nonsense;    // undefined: the chain ran out</code></pre>
+
+<pre><code>task ──▶ Object.prototype ──▶ null</code></pre>
+
+<p><code>class</code> is syntax over exactly this:</p>
+
+<pre><code>class Task {
+  constructor(title) { this.title = title; }
+  describe() { return this.title; }
+}
+
+// describe lives on Task.prototype, ONCE — not on each instance.
+// Which is why 10,000 tasks do not mean 10,000 copies of the method.</code></pre>
+
+<h3>this is decided by the call, not the definition</h3>
+
+<pre><code>const task = {
+  title: 'Buy milk',
+  describe() { return this.title; },
+};
+
+task.describe();                  // 'Buy milk'
+
+const fn = task.describe;
+fn();                             // undefined — `this` is not task any more</code></pre>
+
+<p>
+  <code>this</code> is whatever sits left of the dot <em>at the moment of
+  calling</em>. Pull the method off the object and there is no dot, so there is
+  no <code>this</code>.
+</p>
+
+<pre><code>element.addEventListener('click', task.describe);        // broken
+element.addEventListener('click', () =&gt; task.describe()); // fine</code></pre>
+
+<p>
+  Arrow functions have no <code>this</code> of their own — they use the one
+  from where they were written. That is exactly why they are the right choice
+  for callbacks and the wrong choice for object methods.
+</p>
+
+<h2>The event loop</h2>
+
+<p>
+  One thread. Everything queues. The order is not obvious, and knowing it
+  explains a whole category of "why did that run first".
+</p>
+
+<pre><code>console.log('1');
+setTimeout(() =&gt; console.log('2'), 0);
+Promise.resolve().then(() =&gt; console.log('3'));
+console.log('4');
+
+// 1, 4, 3, 2</code></pre>
+
+<p>The rule, in order:</p>
+
+<ol>
+  <li><strong>All synchronous code</strong> runs to completion first.</li>
+  <li><strong>Microtasks</strong> — promise callbacks, <code>queueMicrotask</code>. The queue is drained <em>entirely</em>.</li>
+  <li><strong>One macrotask</strong> — a timer, an I/O callback, an event.</li>
+  <li>Back to step 2.</li>
+</ol>
+
+<div class="callout callout--warn">
+  <span class="callout__title">Microtasks can starve everything else</span>
+  <p>
+    Because the microtask queue is drained completely before any timer runs, a
+    promise that schedules another promise forever will freeze the page — with
+    no infinite loop anywhere in your code:
+  </p>
+  <pre><code>function spin() { Promise.resolve().then(spin); }
+spin();   // the browser never repaints again</code></pre>
+</div>
+
+<h3>await is a queue position</h3>
+
+<pre><code>async function run() {
+  console.log('a');
+  await null;              // yields, even though there is nothing to wait for
+  console.log('b');
+}
+
+run();
+console.log('c');
+
+// a, c, b</code></pre>
+
+<p>
+  Everything after an <code>await</code> is a microtask, whatever you awaited.
+  That is why <code>await null</code> is occasionally used deliberately: it
+  pushes the rest of the function behind the current synchronous work.
+</p>
+
+<h2>Where these meet in this project</h2>
+
+<ul>
+  <li><strong>Closure</strong> — <code>client/src/library/runner.js</code> keeps <code>settled</code>, <code>worker</code> and <code>timer</code> alive inside a promise for as long as the run lasts.</li>
+  <li><strong>Event loop</strong> — the same file's timeout only starts after the worker reports ready, because starting it earlier charges worker startup to the reader's code.</li>
+  <li><strong>Stale closure avoided</strong> — <code>useTasks.js</code> uses <code>setTasks((current) =&gt; …)</code> rather than closing over the array.</li>
+</ul>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Predict the order</h3>
+  </div>
+<pre><code>console.log('A');
+
+setTimeout(() =&gt; console.log('B'), 0);
+
+Promise.resolve()
+  .then(() =&gt; console.log('C'))
+  .then(() =&gt; console.log('D'));
+
+queueMicrotask(() =&gt; console.log('E'));
+
+console.log('F');</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <p><strong>A F C E D B</strong></p>
+    <ul>
+      <li><code>A</code>, <code>F</code> — synchronous, so first.</li>
+      <li><code>C</code> then <code>E</code> — both queued as microtasks, in the order they were scheduled.</li>
+      <li><code>D</code> — the second <code>.then</code> is only queued once <code>C</code> has run, so it joins the back of the queue.</li>
+      <li><code>B</code> — a timer, and no timer runs until the microtask queue is empty.</li>
+    </ul>
+    <p>
+      The part that catches people is <code>D</code> after <code>E</code>.
+      Chained promises are not one unit; each link is scheduled separately.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Fix the loop three ways</h3>
+  </div>
+  <p>
+    Make this print 0, 1, 2 — once with <code>let</code>, once keeping
+    <code>var</code> and adding a wrapper, and once without a closure at all.
+  </p>
+<pre><code>for (var i = 0; i &lt; 3; i++) {
+  setTimeout(() =&gt; console.log(i), 0);
+}</code></pre>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>// 1. let — a fresh binding per iteration
+for (let i = 0; i &lt; 3; i++) setTimeout(() =&gt; console.log(i), 0);
+
+// 2. var, with an immediately-invoked function to capture a copy.
+//    This is what everyone wrote before let existed.
+for (var i = 0; i &lt; 3; i++) {
+  ((n) =&gt; setTimeout(() =&gt; console.log(n), 0))(i);
+}
+
+// 3. No closure: bind the value as an argument.
+for (var i = 0; i &lt; 3; i++) setTimeout(console.log, 0, i);</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Why does this counter stick?</h3>
+  </div>
+<pre><code>function Timer() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() =&gt; {
+    setInterval(() =&gt; setSeconds(seconds + 1), 1000);
+  }, []);
+
+  return &lt;p&gt;{seconds}&lt;/p&gt;;
+}</code></pre>
+  <p>Name both bugs.</p>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li>
+        <strong>Stale closure.</strong> <code>seconds</code> is captured from
+        the first render and never updates, so it sets 1 every second forever.
+        Fix: <code>setSeconds((s) =&gt; s + 1)</code>.
+      </li>
+      <li>
+        <strong>No cleanup.</strong> The interval is never cleared, so it keeps
+        firing after the component unmounts, and every remount adds another.
+        Fix: return <code>() =&gt; clearInterval(id)</code>.
+      </li>
+    </ol>
+    <p>
+      Both are invisible in a quick test — the number does change, once — which
+      is what makes this pairing so common in real code.
+    </p>
+  </details>
+</div>

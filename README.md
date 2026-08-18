@@ -1,7 +1,7 @@
 # Fullstack Library
 
-A web-based study library for fullstack development: 23 chapters across 13
-volumes, around two and a half hours of reading, with exercises at the end of
+A web-based study library for fullstack development: 27 chapters across 13
+volumes, from basics through intermediate to expert, with exercises at the end of
 each. Browse by subject, search every word, and track what you have read.
 
 It ships with the application those lessons dissect — a task tracker with a

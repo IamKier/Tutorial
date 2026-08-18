@@ -1,0 +1,307 @@
+<h1>Indexes, plans and transactions <span class="tag tag--expert">Expert</span></h1>
+
+<p class="lead">
+  The difference between a query that returns instantly and one that takes
+  thirty seconds is almost never the SQL you wrote. It is whether the database
+  had to read every row to answer it.
+</p>
+
+<h2>What an index actually is</h2>
+
+<p>
+  A sorted copy of one or more columns, with a pointer back to the row. The
+  index at the back of a book, and it works for the same reason: you can find
+  an entry without reading the book.
+</p>
+
+<pre><code>-- Without an index: read all 500,000 rows, keep the matches
+SELECT * FROM tasks WHERE userId = 'abc';
+
+CREATE INDEX idx_tasks_user ON tasks(userId);
+
+-- With one: jump straight into the sorted structure</code></pre>
+
+<p>Indexes are not free, and the cost is the part people forget:</p>
+
+<ul>
+  <li>Every <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> must update every index on that table.</li>
+  <li>They take disk space, sometimes as much as the data.</li>
+  <li>An index nothing queries is pure cost.</li>
+</ul>
+
+<p>
+  So: index what you filter, join and sort by. Not everything, and not "just in
+  case".
+</p>
+
+<h2>Reading the plan</h2>
+
+<p>Stop guessing. Ask the database what it intends to do:</p>
+
+<pre><code>EXPLAIN QUERY PLAN
+SELECT * FROM tasks WHERE userId = 'abc' ORDER BY createdAt DESC;</code></pre>
+
+<pre><code>SCAN tasks                          ← reads every row. Bad.
+SEARCH tasks USING INDEX idx_...    ← uses an index. Good.
+USE TEMP B-TREE FOR ORDER BY        ← sorted the results afterwards. Costly.</code></pre>
+
+<p>Three words tell you nearly everything:</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Word</th><th>Means</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>SCAN</code></td><td>Every row was read. Fine on a small table, fatal on a large one.</td></tr>
+    <tr><td><code>SEARCH</code></td><td>An index was used to jump straight to the rows.</td></tr>
+    <tr><td><code>TEMP B-TREE</code></td><td>The results had to be sorted after fetching, because no index provided the order.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Composite indexes, and why order matters</h2>
+
+<pre><code>CREATE INDEX idx_tasks_user ON tasks(userId, createdAt DESC);</code></pre>
+
+<p>
+  This one index serves the query above completely: it finds the user's rows
+  <em>and</em> they come out already in the right order, so there is no
+  <code>TEMP B-TREE</code>.
+</p>
+
+<p>
+  The column order is not arbitrary. A composite index works like a phone book
+  sorted by surname then first name:
+</p>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Query</th><th>Uses <code>(userId, createdAt)</code>?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>WHERE userId = ?</code></td><td>Yes — the leading column</td></tr>
+    <tr><td><code>WHERE userId = ? AND createdAt &gt; ?</code></td><td>Yes — both, fully</td></tr>
+    <tr><td><code>WHERE createdAt &gt; ?</code></td><td><strong>No</strong> — you cannot look someone up by first name alone</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  The rule: <strong>leftmost prefix</strong>. An index on (A, B, C) serves
+  queries on A, on A+B, and on A+B+C — never on B alone.
+</p>
+
+<h2>Things that quietly defeat an index</h2>
+
+<pre><code>-- ❌ A function on the column: the index holds titles, not LOWER(titles)
+WHERE LOWER(title) = 'buy milk'
+
+-- ✅ Store it the way you search it, or index the expression
+WHERE title = 'Buy milk' COLLATE NOCASE
+CREATE INDEX idx_title_lower ON tasks(LOWER(title));
+
+-- ❌ A leading wildcard: nothing to jump to
+WHERE title LIKE '%milk%'
+
+-- ✅ A trailing one is a prefix, which an index can find
+WHERE title LIKE 'Buy%'</code></pre>
+
+<p>
+  The pattern behind all of these: an index can only help if the value you are
+  searching for is what the index actually stores. Wrap the column in anything
+  and the index no longer describes it.
+</p>
+
+<h2>N+1</h2>
+
+<p>The most common performance bug in application code, by a distance:</p>
+
+<pre><code>// One query for the books…
+const books = db.prepare('SELECT * FROM books').all();
+
+// …and then one more per book. 100 books, 101 queries.
+for (const book of books) {
+  book.chapters = db.prepare('SELECT * FROM chapters WHERE bookId = ?').all(book.id);
+}</code></pre>
+
+<pre><code>// Two queries, whatever the number of books
+const books = db.prepare('SELECT * FROM books').all();
+const chapters = db.prepare('SELECT * FROM chapters').all();
+
+const byBook = new Map();
+for (const c of chapters) {
+  if (!byBook.has(c.bookId)) byBook.set(c.bookId, []);
+  byBook.get(c.bookId).push(c);
+}
+for (const b of books) b.chapters = byBook.get(b.id) ?? [];</code></pre>
+
+<p>
+  It hides well: with ten rows in development it is imperceptible, and with ten
+  thousand in production it is a timeout. The tell is a loop with a query
+  inside it.
+</p>
+
+<h2>Transactions</h2>
+
+<p>
+  Several statements that must all happen or none of them. The classic is
+  moving something between two places:
+</p>
+
+<pre><code>db.exec('BEGIN');
+try {
+  moveTask(taskId, newProjectId);
+  bumpProjectCount(newProjectId);
+  db.exec('COMMIT');
+} catch (err) {
+  db.exec('ROLLBACK');
+  throw err;
+}</code></pre>
+
+<p>
+  Without it, a crash between the two writes leaves a task in a project whose
+  count does not include it — and nothing will ever notice.
+</p>
+
+<h3>They are also a large speed-up</h3>
+
+<pre><code>// Slow: each insert is its own transaction, and each waits for the disk
+for (const task of thousandTasks) insert.run(task.id, task.title);
+
+// Fast: one transaction, one flush at the end. Often 100x.
+db.exec('BEGIN');
+for (const task of thousandTasks) insert.run(task.id, task.title);
+db.exec('COMMIT');</code></pre>
+
+<p>
+  The cost of a write is dominated by making it durable — waiting for the disk
+  to confirm. A thousand transactions means a thousand waits; one transaction
+  means one.
+</p>
+
+<h2>Concurrency, and what WAL buys</h2>
+
+<pre><code>PRAGMA journal_mode = WAL;</code></pre>
+
+<p>
+  Without it, a writer blocks every reader and vice versa. With it, readers
+  carry on against the last committed state while a write is in progress. For a
+  web application — many reads, occasional writes — this is the difference
+  between usable and not.
+</p>
+
+<p>
+  What it does not give you is multiple simultaneous writers. SQLite has one
+  writer at a time, which is why <code>busy_timeout</code> exists: rather than
+  failing instantly when another write is in flight, wait a moment and retry.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">The lost update, again</span>
+  <p>
+    Read a row, change it in JavaScript, write it back — and if two requests do
+    that at once, the second overwrites the first. WAL does not prevent this;
+    it is not a locking problem but a logic one.
+  </p>
+  <pre><code>-- ❌ read, modify, write
+-- ✅ let the database do the arithmetic
+UPDATE projects SET taskCount = taskCount + 1 WHERE id = ?;</code></pre>
+</div>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Read a real plan</h3>
+  </div>
+  <p>
+    With the app running and a few tasks saved, open the database and run
+    <code>EXPLAIN QUERY PLAN</code> on the listing query, once with the index
+    and once after dropping it.
+  </p>
+<pre><code>EXPLAIN QUERY PLAN
+  SELECT * FROM tasks ORDER BY createdAt DESC, rowid DESC;
+
+DROP INDEX idx_tasks_created;
+-- run it again</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      With the index: <code>SCAN tasks USING INDEX idx_tasks_created</code> —
+      the rows come out already ordered.
+    </p>
+    <p>
+      Without it: <code>SCAN tasks</code> followed by
+      <code>USE TEMP B-TREE FOR ORDER BY</code> — every row read, then all of
+      them sorted in memory.
+    </p>
+    <p>
+      With twelve tasks both are instant, which is exactly why this class of
+      problem ships. Recreate the index afterwards.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Which index?</h3>
+  </div>
+  <p>Given these three queries, what is the smallest set of indexes that serves all of them?</p>
+<pre><code>SELECT * FROM tasks WHERE userId = ? ORDER BY createdAt DESC;
+SELECT * FROM tasks WHERE userId = ? AND done = 0;
+SELECT * FROM tasks WHERE dueAt &lt; ? AND done = 0;</code></pre>
+  <details>
+    <summary>Show answer</summary>
+<pre><code>CREATE INDEX idx_user_created ON tasks(userId, createdAt DESC);
+CREATE INDEX idx_due_done     ON tasks(dueAt, done);</code></pre>
+    <p>
+      Two, not three. The first serves query 1 completely, and query 2 partly —
+      it finds the user's rows by the leading column, then filters
+      <code>done</code> among them, which is cheap once the set is small.
+    </p>
+    <p>
+      Query 3 does not start with <code>userId</code>, so it needs its own.
+      Adding a third index for query 2 would slow every write to speed up a
+      filter that was already fast.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Measure a transaction</h3>
+  </div>
+  <p>
+    Write a script that inserts 5,000 rows twice — once with each insert on its
+    own, once inside a single transaction. Time both.
+  </p>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(':memory:');
+db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)');
+const insert = db.prepare('INSERT INTO t (v) VALUES (?)');
+
+let t0 = performance.now();
+for (let i = 0; i &lt; 5000; i++) insert.run('row ' + i);
+console.log('one at a time:', Math.round(performance.now() - t0), 'ms');
+
+db.exec('DELETE FROM t');
+
+t0 = performance.now();
+db.exec('BEGIN');
+for (let i = 0; i &lt; 5000; i++) insert.run('row ' + i);
+db.exec('COMMIT');
+console.log('one transaction:', Math.round(performance.now() - t0), 'ms');</code></pre>
+    <p>
+      In memory the gap is modest. Point it at a file on disk instead and it
+      widens enormously — because the cost is durability, not the insert. That
+      difference is the whole lesson.
+    </p>
+  </details>
+</div>

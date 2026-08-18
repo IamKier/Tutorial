@@ -793,6 +793,15 @@ body {
   color: var(--warning);
 }
 
+/* Expert is the only level that gets a filled tag rather than an outlined
+   one. Three tiers need three clearly different weights, and outline-vs-fill
+   reads as a step up more plainly than a third border colour would. */
+.tag--expert {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 kbd {
   padding: 0.1rem 0.35rem;
   border: 1px solid var(--border-strong);

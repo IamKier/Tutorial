@@ -1,0 +1,277 @@
+<h1>Rendering, performance and escape hatches <span class="tag tag--expert">Expert</span></h1>
+
+<p class="lead">
+  When React is slow it is almost always doing exactly what you told it to.
+  This chapter is about seeing what that is — and about the times the right
+  answer is to step outside React entirely.
+</p>
+
+<h2>When a component re-renders</h2>
+
+<p>Three reasons, and only three:</p>
+
+<ol>
+  <li>Its own state changed.</li>
+  <li>Its parent re-rendered.</li>
+  <li>A context it consumes changed.</li>
+</ol>
+
+<p>
+  The second is the one that surprises people. <strong>A parent re-rendering
+  re-renders every child</strong>, whether or not their props changed. That is
+  usually fine — React compares the result and touches little DOM — but it is
+  the root of most "why is this slow".
+</p>
+
+<h2>Identity, not equality</h2>
+
+<pre><code>&lt;TaskList tasks={tasks} onSelect={() =&gt; pick(id)} /&gt;</code></pre>
+
+<p>
+  That arrow function is a <em>new function</em> on every render. So is
+  <code>{{ color: 'red' }}</code>, and so is <code>tasks.filter(...)</code>.
+  React compares props with <code>Object.is</code> — identity, not contents —
+  so a memoised child sees a changed prop every single time and re-renders
+  anyway.
+</p>
+
+<pre><code>const onSelect = useCallback(() =&gt; pick(id), [id]);
+const visible = useMemo(() =&gt; tasks.filter((t) =&gt; !t.done), [tasks]);</code></pre>
+
+<div class="callout callout--warn">
+  <span class="callout__title">memo without stable props does nothing</span>
+  <p>
+    Wrapping a child in <code>React.memo</code> while passing it a fresh inline
+    function is the most common wasted optimisation in React. The comparison
+    runs, finds a different function, and re-renders — so you have added cost
+    and gained nothing.
+  </p>
+  <p>
+    Either memoise the props too, or do not memoise the child.
+  </p>
+</div>
+
+<h2>Measure before optimising</h2>
+
+<p>
+  Install React DevTools, open the Profiler, record an interaction. It shows
+  which components rendered, how long each took, and — most usefully —
+  <em>why</em> each one rendered.
+</p>
+
+<p>The order to work in:</p>
+
+<ol>
+  <li><strong>Is anything actually slow?</strong> Sixteen milliseconds a frame is the budget. Under it, stop.</li>
+  <li><strong>Is it rendering too often, or rendering too slowly?</strong> Different problems, different fixes.</li>
+  <li><strong>Too often</strong> — find the unstable prop or the state that lives too high.</li>
+  <li><strong>Too slowly</strong> — the component is doing real work; memoise the calculation, or do less of it.</li>
+</ol>
+
+<p>
+  Guessing here is unusually bad, because the intuitive fix — wrapping
+  everything in <code>useMemo</code> — adds comparisons and allocations to
+  every render and frequently makes things measurably worse.
+</p>
+
+<h2>Moving state down beats memoising</h2>
+
+<pre><code>// A keystroke here re-renders the whole page
+function Page() {
+  const [query, setQuery] = useState('');
+  return (
+    &lt;&gt;
+      &lt;input value={query} onChange={(e) =&gt; setQuery(e.target.value)} /&gt;
+      &lt;ExpensiveList /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+<pre><code>// The state lives where it is used, so the list never re-renders
+function SearchBox() {
+  const [query, setQuery] = useState('');
+  return &lt;input value={query} onChange={(e) =&gt; setQuery(e.target.value)} /&gt;;
+}
+
+function Page() {
+  return (&lt;&gt;&lt;SearchBox /&gt;&lt;ExpensiveList /&gt;&lt;/&gt;);
+}</code></pre>
+
+<p>
+  No <code>memo</code>, no <code>useCallback</code>, no dependency arrays —
+  and it is faster than either. <strong>Restructuring beats memoising.</strong>
+  Reach for the hooks when you cannot move the state.
+</p>
+
+<h2>Keys, properly</h2>
+
+<pre><code>{tasks.map((t, i) =&gt; &lt;Row key={i} task={t} /&gt;)}</code></pre>
+
+<p>
+  With an index key, deleting the first item shifts every key. React concludes
+  that row 0's <em>content</em> changed rather than that row 0 was removed, so
+  it reuses the existing DOM elements — including any state inside them.
+</p>
+
+<p>
+  The symptom: you delete a task and a checkbox two rows down is suddenly
+  ticked, or the text you were typing appears in a different row. It looks like
+  a data bug and it is a reconciliation bug.
+</p>
+
+<pre><code>{tasks.map((t) =&gt; &lt;Row key={t.id} task={t} /&gt;)}</code></pre>
+
+<p>
+  There is one deliberate use of a changing key: forcing a remount. Change the
+  key and React discards the old component and its state entirely.
+</p>
+
+<pre><code>&lt;Editor key={documentId} /&gt;   {/* a new document starts fresh */}</code></pre>
+
+<h2>Escape hatches</h2>
+
+<p>
+  Sometimes the right answer is to stop letting React manage something. This
+  project has a worked example, and it was a bug first.
+</p>
+
+<pre><code>// React owns these children and re-applies the HTML on every render
+&lt;article dangerouslySetInnerHTML={{ __html: html }} /&gt;</code></pre>
+
+<p>
+  Enhancing that markup — adding syntax colours, Run buttons, heading ids — and
+  then calling <code>setState</code> made React re-apply the raw HTML and wipe
+  every change. Silently, with no error.
+</p>
+
+<pre><code>// React renders it empty; we own what goes inside
+&lt;article ref={articleRef} /&gt;
+
+useLayoutEffect(() =&gt; {
+  articleRef.current.innerHTML = html;
+  setHeadings(enhance(articleRef.current));
+}, [html]);</code></pre>
+
+<p>
+  <strong>React owns the container, or you own the contents. Pick one.</strong>
+  The same rule applies to any third-party library that writes to the DOM — a
+  chart, a map, an editor. Give it an empty element and never render children
+  into it.
+</p>
+
+<h3>useLayoutEffect, and when it earns its cost</h3>
+
+<p>
+  <code>useEffect</code> runs after the browser paints;
+  <code>useLayoutEffect</code> runs before. The latter blocks painting, so it is
+  the wrong default — but it is right whenever the difference would be visible
+  as a flicker, which is exactly the case above.
+</p>
+
+<h2>Concurrent rendering</h2>
+
+<pre><code>const [query, setQuery] = useState('');
+const deferred = useDeferredValue(query);
+
+// The input updates immediately; the expensive list lags behind
+&lt;input value={query} onChange={(e) =&gt; setQuery(e.target.value)} /&gt;
+&lt;Results query={deferred} /&gt;</code></pre>
+
+<p>
+  React can now abandon a render in progress if something more urgent arrives.
+  <code>useDeferredValue</code> marks a value as low priority, so typing stays
+  responsive while the heavy list catches up when there is time.
+</p>
+
+<p>
+  This is also why <code>&lt;StrictMode&gt;</code> double-invokes effects in
+  development: a render that can be interrupted and restarted must be safe to
+  run twice, and the double-invocation surfaces the code that is not.
+</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Why is memo doing nothing?</h3>
+  </div>
+<pre><code>const Row = React.memo(function Row({ task, onToggle, style }) { /* … */ });
+
+function List({ tasks }) {
+  return tasks.map((t) =&gt; (
+    &lt;Row
+      key={t.id}
+      task={t}
+      onToggle={() =&gt; toggle(t.id)}
+      style={{ padding: 8 }}
+    /&gt;
+  ));
+}</code></pre>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      Two props are new objects on every render: the arrow function and the
+      style object. <code>Object.is</code> says they differ, so every row
+      re-renders and the <code>memo</code> only adds a comparison.
+    </p>
+<pre><code>// Hoist what never changes
+const ROW_STYLE = { padding: 8 };
+
+// Pass the id and let the child call back, so no closure is created per row
+&lt;Row key={t.id} task={t} onToggle={toggle} style={ROW_STYLE} /&gt;
+// inside Row: onClick={() =&gt; onToggle(task.id)}</code></pre>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Reproduce the index-key bug</h3>
+  </div>
+  <p>
+    Render a list of three items, each with its own <code>&lt;input&gt;</code>,
+    keyed by index. Type something in the first, then delete that item. What
+    happens to the text, and why?
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      The text stays on screen, now belonging to what was the second item.
+      React sees key 0 still exists, assumes it is the same component with new
+      props, and keeps the DOM node — including the input's value, which React
+      never controlled.
+    </p>
+    <p>
+      With <code>key={item.id}</code>, React sees key 0 has gone, unmounts that
+      component, and the text goes with it. Same data, correct behaviour — the
+      only difference is what you told React the identity was.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Move the state instead</h3>
+  </div>
+  <p>
+    In this library, the search dialog holds its query in <code>App</code>'s
+    subtree. Find where <code>Search.jsx</code> keeps <code>query</code>, and
+    explain why keeping it there rather than in <code>App</code> matters.
+  </p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      <code>query</code> lives inside <code>Search</code>. If it lived in
+      <code>App</code>, every keystroke would re-render the entire application —
+      the masthead, the current page, the whole lesson if one were open.
+    </p>
+    <p>
+      <code>App</code> holds only <code>searchOpen</code>, a boolean that
+      changes twice per search rather than once per character. That is the
+      general shape: <strong>state belongs at the lowest point that can see
+      everything needing it</strong>, and no higher.
+    </p>
+  </details>
+</div>

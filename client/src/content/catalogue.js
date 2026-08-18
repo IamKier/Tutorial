@@ -72,6 +72,7 @@ export const SUBJECTS = [
             level: 'Intermediate',
             words: 1409,
           },
+          { slug: 'css-expert', title: 'Modern CSS', level: 'Expert', words: 1183 },
         ],
       },
       {
@@ -88,6 +89,12 @@ export const SUBJECTS = [
             level: 'Intermediate',
             words: 1432,
           },
+          {
+            slug: 'js-expert',
+            title: 'Closures, prototypes and the event loop',
+            level: 'Expert',
+            words: 1132,
+          },
         ],
       },
       {
@@ -102,6 +109,12 @@ export const SUBJECTS = [
             title: 'State, effects and hooks',
             level: 'Intermediate',
             words: 1442,
+          },
+          {
+            slug: 'react-expert',
+            title: 'Rendering, performance and escape hatches',
+            level: 'Expert',
+            words: 1199,
           },
         ],
       },
@@ -137,6 +150,12 @@ export const SUBJECTS = [
             words: 1697,
           },
           { slug: 'sql-basics', title: 'SQL and SQLite', level: 'Intermediate', words: 1733 },
+          {
+            slug: 'sql-expert',
+            title: 'Indexes, plans and transactions',
+            level: 'Expert',
+            words: 1348,
+          },
         ],
       },
       {

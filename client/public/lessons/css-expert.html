@@ -1,0 +1,299 @@
+<h1>Modern CSS <span class="tag tag--expert">Expert</span></h1>
+
+<p class="lead">
+  CSS has quietly absorbed most of what people reached for JavaScript and
+  preprocessors to do. This chapter is the handful of features that actually
+  change how you write it.
+</p>
+
+<h2>Container queries</h2>
+
+<p>
+  A media query asks how big the <em>window</em> is. That has always been the
+  wrong question for a component, which cares how much room <em>it</em> has.
+</p>
+
+<pre><code>.card-area {
+  container-type: inline-size;
+  container-name: card;
+}
+
+.card { display: block; }
+
+@container card (min-width: 30rem) {
+  .card { display: grid; grid-template-columns: 8rem 1fr; }
+}</code></pre>
+
+<p>
+  The same card now lays out one way in a narrow sidebar and another in a wide
+  main column — <em>on the same page, at the same window size</em>. Media
+  queries cannot express that at all.
+</p>
+
+<div class="callout callout--note">
+  <span class="callout__title">Why this matters more than it sounds</span>
+  <p>
+    It is the difference between a component that works and a component that
+    works <em>where you put it</em>. Every "this card breaks in the sidebar" bug
+    is a media query being asked the wrong question.
+  </p>
+</div>
+
+<h2>:has() — the parent selector</h2>
+
+<p>
+  Selecting an element because of what is inside it was the single most
+  requested missing feature in CSS, for twenty years.
+</p>
+
+<pre><code>/* A card that contains an image lays out differently */
+.card:has(img) { grid-template-columns: 8rem 1fr; }
+
+/* A field whose input is invalid, styled at the wrapper */
+.field:has(input:invalid) { border-color: var(--danger); }
+
+/* A form where nothing is checked */
+form:not(:has(:checked)) .submit { opacity: 0.5; }</code></pre>
+
+<p>This project uses it once, and the use is instructive:</p>
+
+<pre><code>.shell:has(.cover) {
+  padding-top: 0;
+  padding-bottom: 0;
+}</code></pre>
+
+<p>
+  The cover needs to fill the viewport exactly, so its container must not add
+  padding. Before <code>:has()</code>, that meant a class toggled from
+  JavaScript — state living in two places to solve a layout problem. Now the
+  parent responds to what it holds, and no JavaScript is involved.
+</p>
+
+<h2>Cascade layers</h2>
+
+<p>
+  Specificity fights end with someone writing <code>!important</code>. Layers
+  end them properly, by declaring the order of precedence up front:
+</p>
+
+<pre><code>@layer reset, base, components, utilities;
+
+@layer components {
+  #sidebar .nav a.link { color: blue; }    /* very specific */
+}
+
+@layer utilities {
+  .text-red { color: red; }                /* one class — and it wins */
+}</code></pre>
+
+<p>
+  Layer order beats specificity entirely. A single class in a later layer
+  overrides an id selector in an earlier one, which is exactly the behaviour
+  utility classes always wanted and never had.
+</p>
+
+<h2>Modern sizing and colour</h2>
+
+<pre><code>/* One line instead of two media queries */
+font-size: clamp(1rem, 2.5vw, 2rem);
+
+/* Mix in the colours you already have, rather than inventing new hex */
+background: color-mix(in srgb, var(--bg) 85%, transparent);
+
+/* Viewport units that account for a phone's collapsing address bar */
+min-height: 100dvh;
+
+/* Logical properties: correct in right-to-left languages for free */
+margin-inline: auto;
+padding-block: var(--space-4);
+border-inline-start: 2px solid var(--accent);</code></pre>
+
+<p>
+  <code>color-mix</code> is the quiet one. It means a translucent version of a
+  themed colour without hard-coding an rgba value that then fails to change
+  with the theme — which is how this project's translucent masthead works in
+  both light and dark from one declaration.
+</p>
+
+<h3>Logical properties are not pedantry</h3>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Physical</th><th>Logical</th><th>In Arabic or Hebrew</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>margin-left</code></td><td><code>margin-inline-start</code></td><td>flips to the right</td></tr>
+    <tr><td><code>padding-top</code></td><td><code>padding-block-start</code></td><td>unchanged</td></tr>
+    <tr><td><code>width</code></td><td><code>inline-size</code></td><td>unchanged</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Write logical properties and a right-to-left version of your site is a
+  <code>dir="rtl"</code> attribute rather than a second stylesheet.
+</p>
+
+<h2>Subgrid</h2>
+
+<p>
+  The long-standing problem with card grids: each card is its own grid, so the
+  titles in adjacent cards do not line up when one wraps to two lines.
+</p>
+
+<pre><code>.cards { display: grid; grid-template-rows: auto 1fr auto; }
+
+.card {
+  display: grid;
+  grid-row: span 3;
+  /* Use the PARENT's rows rather than making my own */
+  grid-template-rows: subgrid;
+}</code></pre>
+
+<p>
+  Now every card's title, body and footer sit on shared rows, so they align
+  across the whole grid however long the text is. The alternative was fixing
+  heights and clamping lines — which this project does on the book covers, and
+  would not need to with subgrid.
+</p>
+
+<h2>Things you no longer need JavaScript for</h2>
+
+<div class="table-scroll">
+<table>
+  <thead>
+    <tr><th>Was JavaScript</th><th>Now CSS</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Accordions</td><td><code>&lt;details&gt;</code> and <code>&lt;summary&gt;</code></td></tr>
+    <tr><td>Smooth scrolling</td><td><code>scroll-behavior: smooth</code></td></tr>
+    <tr><td>Scroll snapping</td><td><code>scroll-snap-type</code></td></tr>
+    <tr><td>Sticky headers</td><td><code>position: sticky</code></td></tr>
+    <tr><td>Aspect ratios</td><td><code>aspect-ratio: 3 / 4</code></td></tr>
+    <tr><td>Truncating to N lines</td><td><code>-webkit-line-clamp</code></td></tr>
+    <tr><td>Dialogs and modals</td><td><code>&lt;dialog&gt;</code> and <code>::backdrop</code></td></tr>
+    <tr><td>Reacting to a child's state</td><td><code>:has()</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  The pattern worth internalising: <strong>check whether the platform does it
+  before writing code</strong>. Every one of these was a library once, and the
+  native version is smaller, faster, and accessible without effort.
+</p>
+
+<h2>Performance</h2>
+
+<pre><code>/* Cheap: the compositor handles these, no layout recalculated */
+transform: translateY(-14px);
+opacity: 0.5;
+
+/* Expensive: every frame recalculates the position of everything */
+top: -14px;
+width: 200px;
+margin-left: 20px;</code></pre>
+
+<p>
+  Animating <code>transform</code> and <code>opacity</code> costs almost
+  nothing. Animating anything that affects layout forces the browser to work
+  out where every element goes, sixty times a second. That is where jank comes
+  from, and it is why the books on the shelf here lift with
+  <code>translateY</code> rather than <code>margin-top</code>.
+</p>
+
+<pre><code>/* Skip rendering work for what is off-screen */
+.long-list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 6rem;   /* a size guess, so the scrollbar behaves */
+}</code></pre>
+
+<h2>Exercises</h2>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">1</span>
+    <h3 class="exercise__title">Media query or container query?</h3>
+  </div>
+  <p>Which fits each, and why?</p>
+  <ol>
+    <li>A page switches from one column to two on a wide screen</li>
+    <li>A product card shows its image beside the text when it has room</li>
+    <li>Hiding a decorative sidebar on phones</li>
+    <li>A comment component used in both a narrow drawer and a wide page</li>
+  </ol>
+  <details>
+    <summary>Show answer</summary>
+    <ol>
+      <li><strong>Media.</strong> A page-level decision about the viewport.</li>
+      <li><strong>Container.</strong> The card cares about its own width; the same card may appear in two places at one window size.</li>
+      <li><strong>Media.</strong> Genuinely about the device.</li>
+      <li><strong>Container.</strong> Precisely the case media queries cannot express.</li>
+    </ol>
+    <p>
+      The test: <em>would the answer change if I moved this component
+      elsewhere on the same page?</em> If yes, it is a container query.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">2</span>
+    <h3 class="exercise__title">Replace the JavaScript</h3>
+  </div>
+  <p>Each of these can be done in CSS or plain HTML. How?</p>
+<pre><code>// A
+button.onclick = () =&gt; panel.classList.toggle('open');
+
+// B
+if (card.querySelector('img')) card.classList.add('has-image');
+
+// C
+el.style.height = el.offsetWidth * 0.75 + 'px';</code></pre>
+  <details>
+    <summary>Show solution</summary>
+<pre><code>&lt;!-- A: the browser owns the state, the keyboard support and the
+     screen reader announcement --&gt;
+&lt;details&gt;&lt;summary&gt;Show&lt;/summary&gt;…&lt;/details&gt;</code></pre>
+<pre><code>/* B */
+.card:has(img) { /* … */ }
+
+/* C */
+.el { aspect-ratio: 4 / 3; }</code></pre>
+    <p>
+      C is the sharpest illustration: the JavaScript version reads
+      <code>offsetWidth</code>, which forces a synchronous layout, and then
+      never updates when the element resizes.
+    </p>
+  </details>
+</div>
+
+<div class="exercise">
+  <div class="exercise__head">
+    <span class="exercise__number">3</span>
+    <h3 class="exercise__title">Find the layout thrash</h3>
+  </div>
+<pre><code>items.forEach((el) =&gt; {
+  const h = el.offsetHeight;      // read
+  el.style.height = h * 2 + 'px'; // write
+});</code></pre>
+  <p>Why is this slow with a thousand items, and how would you fix it?</p>
+  <details>
+    <summary>Show answer</summary>
+    <p>
+      Every read of <code>offsetHeight</code> after a write forces the browser
+      to recalculate layout immediately, because the answer might have changed.
+      Alternating read and write a thousand times means a thousand forced
+      layouts — <strong>layout thrashing</strong>.
+    </p>
+<pre><code>// Read everything first, then write everything.
+const heights = items.map((el) =&gt; el.offsetHeight);
+items.forEach((el, i) =&gt; { el.style.height = heights[i] * 2 + 'px'; });</code></pre>
+    <p>
+      Two passes, two layouts. The general rule: <strong>batch reads, then
+      batch writes</strong> — never interleave them.
+    </p>
+  </details>
+</div>
