@@ -21,7 +21,16 @@ import { MAX_TASKS } from '../config.js';
 // database never treats them as SQL, which is what makes injection impossible.
 // Building these strings with template literals is how data breaches happen.
 // ---------------------------------------------------------------------------
-const selectAll = db.prepare(`SELECT * FROM tasks ORDER BY createdAt DESC`);
+// Ordered newest first — with a tie-break, which is not optional.
+//
+// createdAt has millisecond resolution, so two tasks created in the same
+// millisecond compare equal and SQLite is then free to return them in any
+// order it likes. That is rare by hand and routine in a loop or a test, and it
+// shows up as a list that reshuffles itself between reloads.
+//
+// rowid is SQLite's own always-increasing integer key, so it breaks the tie in
+// true insertion order.
+const selectAll = db.prepare(`SELECT * FROM tasks ORDER BY createdAt DESC, rowid DESC`);
 const selectOne = db.prepare(`SELECT * FROM tasks WHERE id = ?`);
 
 const insertTask = db.prepare(

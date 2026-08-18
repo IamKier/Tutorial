@@ -63,7 +63,7 @@
 <div class="callout callout--note">
   <span class="callout__title">In this project</span>
   <p>
-    <code>learn/index.html</code> uses <code>&lt;aside&gt;</code> for the
+    <code>client/src/library/</code> uses <code>&lt;aside&gt;</code> for the
     sidebar, <code>&lt;nav&gt;</code> for the lesson list and
     <code>&lt;main&gt;</code> for the lesson. That is why the "Skip to lesson"
     link at the top works — it jumps past the whole sidebar. Press Tab as soon
@@ -131,7 +131,7 @@
 &lt;button aria-pressed="true"&gt;Bold&lt;/button&gt;
 
 &lt;!-- Marks the current page in a nav --&gt;
-&lt;a href="/learn/" aria-current="page"&gt;Learn&lt;/a&gt;
+&lt;a href="/about" aria-current="page"&gt;About&lt;/a&gt;
 
 &lt;!-- Hides decoration from screen readers --&gt;
 &lt;svg aria-hidden="true"&gt;...&lt;/svg&gt;
@@ -170,7 +170,7 @@ tabindex="3"    &lt;!-- never do this --&gt;</code></pre>
 <p>
   <code>tabindex="-1"</code> is genuinely useful, though: it lets JavaScript
   move focus somewhere that is not normally focusable. That is exactly what
-  <code>learn/index.html</code> does on <code>&lt;main&gt;</code> — when you
+  <code>client/src/hooks/useRouter.js</code> does — when you
   open a lesson, <code>learn.js</code> calls <code>.focus()</code> on it, so a
   keyboard user lands in the new content instead of being stranded in the
   sidebar.

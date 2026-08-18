@@ -1,10 +1,12 @@
-# Tasks
+# Fullstack Library
 
-A task app: **React** on the front, a hand-written **Node** backend on the
-back, **SQLite** underneath. No accounts — open it and it is there.
+A web-based study library for fullstack development: 15 lessons, around five
+hours of reading, with exercises at the end of each. Browse by topic, search
+every word of every lesson, and track what you have read.
 
-It also ships a 15-lesson course that teaches the web by explaining the code
-next to it.
+It ships with the application those lessons dissect — a task tracker with a
+**React** frontend, a hand-written **Node** backend and **SQLite** underneath.
+Reading code that has to work teaches more than code written to be read.
 
 ## Run it
 

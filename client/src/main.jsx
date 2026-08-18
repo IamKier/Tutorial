@@ -10,6 +10,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
+import './styles/library.css';
 import './styles/app.css';
 
 // Takes over the empty <div id="root"> in index.html. Everything you see is

@@ -1,0 +1,158 @@
+<h1>How this works</h1>
+
+<p class="lead">
+  Fifteen lessons that take you from a blank HTML file to a working fullstack
+  application. Everything is hand-written and explained — no framework magic,
+  no copying without understanding.
+</p>
+
+<h2>The order, and why it is that order</h2>
+
+<p>
+  The library is meant to be read top to bottom. Each topic assumes the ones
+  above it:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Topic</th>
+      <th>What you can do after it</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>HTML</strong></td>
+      <td>Put content on a page and build a form that collects input</td>
+    </tr>
+    <tr>
+      <td><strong>CSS</strong></td>
+      <td>Lay that page out and make it work on a phone and in dark mode</td>
+    </tr>
+    <tr>
+      <td><strong>JavaScript</strong></td>
+      <td>React to clicks, change the page, and talk to a server</td>
+    </tr>
+    <tr>
+      <td><strong>How the web works</strong></td>
+      <td>Explain exactly what travels between browser and server</td>
+    </tr>
+    <tr>
+      <td><strong>Backend with Node</strong></td>
+      <td>Write the server that answers those requests</td>
+    </tr>
+    <tr>
+      <td><strong>Data</strong></td>
+      <td>Store things so they survive a restart, and model them sensibly</td>
+    </tr>
+    <tr>
+      <td><strong>The project</strong></td>
+      <td>Read a whole application and know why every line is there</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  Each lesson starts with the basics and pushes into intermediate ground before
+  it ends, then gives you exercises. The exercises are the part that actually
+  teaches — reading code feels like understanding, and typing it is what proves
+  it.
+</p>
+
+<h2>How to use a lesson</h2>
+
+<ol>
+  <li><strong>Read it once</strong> without typing anything, to get the shape.</li>
+  <li><strong>Type the examples</strong> — not copy, type. The mistakes you make are the lesson.</li>
+  <li><strong>Do the exercises</strong> before opening the solution. Being stuck for five minutes is productive; being stuck for thirty is not, so peek after that.</li>
+  <li><strong>Mark it read</strong> at the bottom. Your progress is saved in this browser.</li>
+</ol>
+
+<div class="callout callout--note">
+  <span class="callout__title">Finding your way around</span>
+  <p>
+    Press <kbd>Ctrl</kbd> <kbd>K</kbd> — or just <kbd>/</kbd> — to search every
+    word of every lesson, not only the titles. The outline on the right of a
+    long lesson jumps between its sections, and the breadcrumb at the top gets
+    you back out.
+  </p>
+</div>
+
+<h2>A scratch file for experiments</h2>
+
+<p>
+  Most exercises want somewhere to try things. Make a file called
+  <code>scratch.html</code> anywhere on your machine, paste this in, and open it
+  by double-clicking. No server needed:
+</p>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;meta charset="UTF-8" /&gt;
+    &lt;title&gt;Scratch&lt;/title&gt;
+    &lt;style&gt;
+      /* CSS experiments go here */
+    &lt;/style&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;!-- HTML experiments go here --&gt;
+
+    &lt;script&gt;
+      // JavaScript experiments go here
+      console.log('hello');
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<p>
+  Press <strong>F12</strong> to open your browser's developer tools and click
+  the Console tab. That is where <code>console.log</code> output and error
+  messages appear, and you will live there from the JavaScript lessons onward.
+</p>
+
+<h2>The example project</h2>
+
+<p>
+  From the Node lessons onward, the examples come from a real application — a
+  task tracker with a React frontend, a hand-written Node backend and a SQLite
+  database. It is running at <a href="#/demo">the demo</a>, and its source is
+  the repository this library lives in.
+</p>
+
+<p>
+  That is deliberate. Code written to be read in a tutorial is always tidier
+  than code that has to work, and the difference is where most of the real
+  lessons hide.
+</p>
+
+<div class="callout callout--warn">
+  <span class="callout__title">One honest caveat</span>
+  <p>
+    The project has been rebuilt since several of these lessons were written —
+    it now uses React and SQLite where it once used plain JavaScript and a JSON
+    file. Every concept in the lessons still holds, and the older approaches
+    are worth understanding precisely because they explain what the newer ones
+    replaced. But where a lesson names a specific file, that path may no longer
+    match what is in the repository.
+  </p>
+</div>
+
+<h2>One habit worth building now</h2>
+
+<p>
+  When something does not work, <strong>read the error message before changing
+  anything</strong>. Beginners tend to skip past errors and start guessing. The
+  message almost always names the file and the line, and it is right far more
+  often than a guess is.
+</p>
+
+<h2>Ready</h2>
+
+<p>
+  Start with <a href="#/lesson/html-basics">HTML: the basics</a>. If you already
+  know some HTML and CSS, skim those and slow down at
+  <a href="#/lesson/js-async">Async, promises and fetch</a> — that is where the
+  frontend and backend meet, and it is the concept most people find genuinely
+  hard.
+</p>
