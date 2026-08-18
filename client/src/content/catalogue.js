@@ -40,7 +40,7 @@ export const SUBJECTS = [
         title: 'Start Here',
         tagline: 'How the library works and how to use it',
         spine: '#6b6155',
-        chapters: [{ slug: 'welcome', title: 'How this works', level: 'Basics', words: 647 }],
+        chapters: [{ slug: 'welcome', title: 'How this works', level: 'Basics', words: 658 }],
       },
       {
         id: 'html',
@@ -48,13 +48,13 @@ export const SUBJECTS = [
         tagline: 'The structure of every page on the web',
         spine: '#8a3324',
         chapters: [
-          { slug: 'html-basics', title: 'The basics', level: 'Basics', words: 1220 },
-          { slug: 'html-forms', title: 'Forms and input', level: 'Basics', words: 1229 },
+          { slug: 'html-basics', title: 'The basics', level: 'Basics', words: 1254 },
+          { slug: 'html-forms', title: 'Forms and input', level: 'Basics', words: 1259 },
           {
             slug: 'html-semantic',
             title: 'Semantics and accessibility',
             level: 'Intermediate',
-            words: 1217,
+            words: 1252,
           },
         ],
       },
@@ -64,13 +64,13 @@ export const SUBJECTS = [
         tagline: 'Layout, colour, and making it work on a phone',
         spine: '#2f5d62',
         chapters: [
-          { slug: 'css-basics', title: 'The basics', level: 'Basics', words: 1340 },
-          { slug: 'css-layout', title: 'Layout: flexbox and grid', level: 'Basics', words: 1354 },
+          { slug: 'css-basics', title: 'The basics', level: 'Basics', words: 1443 },
+          { slug: 'css-layout', title: 'Layout: flexbox and grid', level: 'Basics', words: 1384 },
           {
             slug: 'css-systems',
             title: 'Variables, themes, responsive',
             level: 'Intermediate',
-            words: 1383,
+            words: 1409,
           },
         ],
       },
@@ -80,13 +80,13 @@ export const SUBJECTS = [
         tagline: 'The only language that runs in a browser',
         spine: '#8a6a1f',
         chapters: [
-          { slug: 'js-basics', title: 'The basics', level: 'Basics', words: 1512 },
-          { slug: 'js-dom', title: 'The DOM and events', level: 'Basics', words: 1489 },
+          { slug: 'js-basics', title: 'The basics', level: 'Basics', words: 1548 },
+          { slug: 'js-dom', title: 'The DOM and events', level: 'Basics', words: 1530 },
           {
             slug: 'js-async',
             title: 'Async, promises and fetch',
             level: 'Intermediate',
-            words: 1408,
+            words: 1432,
           },
         ],
       },
@@ -96,12 +96,12 @@ export const SUBJECTS = [
         tagline: 'Letting a framework keep the screen in step with your data',
         spine: '#3d5a80',
         chapters: [
-          { slug: 'react-basics', title: 'Components and JSX', level: 'Basics', words: 1092 },
+          { slug: 'react-basics', title: 'Components and JSX', level: 'Basics', words: 1137 },
           {
             slug: 'react-state',
             title: 'State, effects and hooks',
             level: 'Intermediate',
-            words: 1412,
+            words: 1442,
           },
         ],
       },
@@ -111,7 +111,7 @@ export const SUBJECTS = [
         tagline: 'What actually travels between browser and server',
         spine: '#4a6141',
         chapters: [
-          { slug: 'web-http', title: 'HTTP, requests, responses', level: 'Basics', words: 1337 },
+          { slug: 'web-http', title: 'HTTP, requests, responses', level: 'Basics', words: 1435 },
         ],
       },
       {
@@ -120,8 +120,8 @@ export const SUBJECTS = [
         tagline: 'JavaScript on the server, and the API it serves',
         spine: '#5c4033',
         chapters: [
-          { slug: 'node-basics', title: 'Node fundamentals', level: 'Basics', words: 1367 },
-          { slug: 'node-api', title: 'Building a REST API', level: 'Intermediate', words: 1508 },
+          { slug: 'node-basics', title: 'Node fundamentals', level: 'Basics', words: 1417 },
+          { slug: 'node-api', title: 'Building a REST API', level: 'Intermediate', words: 1555 },
         ],
       },
       {
@@ -134,9 +134,9 @@ export const SUBJECTS = [
             slug: 'data-storage',
             title: 'Storing and modelling data',
             level: 'Intermediate',
-            words: 1642,
+            words: 1697,
           },
-          { slug: 'sql-basics', title: 'SQL and SQLite', level: 'Intermediate', words: 1692 },
+          { slug: 'sql-basics', title: 'SQL and SQLite', level: 'Intermediate', words: 1733 },
         ],
       },
       {
@@ -149,7 +149,7 @@ export const SUBJECTS = [
             slug: 'project-tour',
             title: 'Tour of the project',
             level: 'Intermediate',
-            words: 1303,
+            words: 1415,
           },
         ],
       },
