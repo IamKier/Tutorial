@@ -117,9 +117,9 @@ export const TOPICS = [
     lessons: [
       {
         slug: 'project-tour',
-        title: 'Tour of the task tracker',
+        title: 'Tour of the project',
         level: 'Intermediate',
-        words: 1648,
+        words: 1303,
       },
     ],
   },

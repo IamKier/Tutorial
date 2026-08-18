@@ -167,7 +167,7 @@ tasks.reduce((count, t) =&gt; t.done ? count + 1 : count, 0);
 // ['TEST', 'SHIP']</code></pre>
 
 <p>
-  Open <code>public/app.js</code> and you will find every one of these. Learning
+  Open <code>client/src/hooks/useTasks.js</code> and you will find every one of these. Learning
   them well is the single biggest jump in JavaScript fluency.
 </p>
 
@@ -262,14 +262,14 @@ import * as db from './db.js';        // everything, namespaced</code></pre>
 
 <p>
   Anything not exported is private to its file. That is what makes
-  <code>db.js</code> in this project a real boundary: <code>readAll</code> and
+  <code>src/db/tasks.js</code> in this project a real boundary: <code>readAll</code> and
   <code>writeAll</code> are not exported, so nothing outside can touch the file
   directly.
 </p>
 
 <p>
   In the browser, modules need <code>&lt;script type="module"&gt;</code> — which
-  is exactly what <code>index.html</code> uses.
+  is exactly what <code>client/index.html</code> uses.
 </p>
 
 <h2>Errors</h2>
@@ -289,7 +289,7 @@ throw new Error('Title is required');</code></pre>
   <p>
     An empty <code>catch {}</code> turns a crash you could debug into wrong
     behaviour you cannot. Catch what you expect and can handle; let everything
-    else through. Look at <code>db.js</code>: it catches the "file does not
+    else through. Look at <code>src/db/tasks.js</code>: it catches the "file does not
     exist" error specifically and re-throws everything else.
   </p>
 </div>
@@ -379,7 +379,7 @@ false     // two different arrays; === compares identity, not contents</code></p
   };
 }</code></pre>
     <p>
-      This is essentially what <code>render()</code> in <code>app.js</code>
+      This is essentially what the <code>stats</code> memo in <code>client/src/hooks/useTasks.js</code>
       computes for the progress bar — including that divide-by-zero guard, which
       is why the bar is hidden entirely when there are no tasks.
     </p>

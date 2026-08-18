@@ -84,7 +84,7 @@ await fs.rm('old.txt');</code></pre>
 </p>
 
 <p>
-  Two details from <code>db.js</code> in this project. Passing
+  Two details from <code>src/db/tasks.js</code> in this project. Passing
   <code>'utf8'</code> gets you a string; leave it off and you get a
   <code>Buffer</code> of raw bytes. And <code>recursive: true</code> on
   <code>mkdir</code> means "create it, and do not complain if it already
@@ -289,7 +289,7 @@ await fs.writeFile(FILE, String(count), 'utf8');
 console.log(count);</code></pre>
     <p>
       That try/catch is the same pattern as <code>readAll</code> in
-      <code>db.js</code>: handle the one error you expect, re-throw the rest.
+      <code>src/db/tasks.js</code>: handle the one error you expect, re-throw the rest.
     </p>
   </details>
 </div>

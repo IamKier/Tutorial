@@ -68,7 +68,7 @@ el.innerHTML = '&lt;strong&gt;Hi&lt;/strong&gt;'; // parsed as HTML — dangerou
   </p>
   <p>
     The rule is not "never use innerHTML" — it is <strong>never use it with
-    anything a user typed</strong>. In <code>app.js</code>, task titles use
+    anything a user typed</strong>. In <code>client/src/library/enhance.js</code>, code samples use
     <code>textContent</code>; the fixed SVG icon markup uses
     <code>innerHTML</code>, because that string is ours.
   </p>
@@ -93,7 +93,7 @@ el.classList.contains('is-done');</code></pre>
 <p>
   That third <code>toggle</code> form — with a second argument — is the neatest
   way to sync a class to a value, and it appears all over
-  <code>app.js</code>.
+  <code>client/src/library/enhance.js</code>.
 </p>
 
 <h3>Custom data</h3>
@@ -140,8 +140,8 @@ parent.replaceChildren(a, b, c);    // replace everything in one go</code></pre>
     Every insertion can make the browser recalculate layout. Appending 100 items
     one at a time can do that 100 times. Build them into a
     <code>DocumentFragment</code> — a lightweight off-screen container — or an
-    array, then insert in a single call. Both <code>app.js</code> and
-    <code>learn.js</code> do this.
+    array, then insert in a single call. Both <code>client/src/library/enhance.js</code> and
+    <code>client/src/library/enhance.js</code> do this.
   </p>
 </div>
 
@@ -389,7 +389,7 @@ render();</code></pre>
   <p>
     In the app, add a task titled
     <code>&lt;img src=x onerror="alert('hacked')"&gt;</code>. Nothing happens —
-    good. Now edit <code>app.js</code>, change <code>title.textContent</code> to
+    good. Now edit <code>client/src/library/enhance.js</code>, change the <code>span.textContent</code> in <code>highlight()</code> to
     <code>title.innerHTML</code>, reload, and add it again. Change it back
     afterwards.
   </p>
@@ -404,7 +404,7 @@ render();</code></pre>
     </p>
     <p>
       Now notice how thoroughly this is stored: the title went to the server,
-      into <code>tasks.json</code>, and back out again. Every visitor who loads
+      into the database, and back out again. Every visitor who loads
       the list runs it. That is a <em>stored</em> XSS, the worst kind — and the
       entire fix was one word.
     </p>

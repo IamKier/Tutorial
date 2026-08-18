@@ -157,7 +157,7 @@ if (typeof changes.done === 'boolean') task.done = changes.done;</code></pre>
 
 <p>
   Because the frontend can then always read <code>body.error</code>. Look at the
-  <code>request()</code> wrapper in <code>app.js</code>: it pulls that field out
+  <code>request()</code> wrapper in <code>client/src/api.js</code>: it pulls that field out
   and shows it in the toast, so the server's message reaches the user unchanged.
 </p>
 

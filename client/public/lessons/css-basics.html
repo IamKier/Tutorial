@@ -92,8 +92,8 @@ li:first-child{ }   /* structural position */
 
 <p>
   If two rules have equal specificity, the one written later wins. That is why
-  the order of your stylesheet matters, and why <code>theme.css</code> is loaded
-  before <code>styles.css</code> in this project.
+  the order of your stylesheet matters, and why <code>client/public/theme.css</code> is loaded
+  before <code>client/src/styles/app.css</code> in this project.
 </p>
 
 <div class="callout callout--tip">
@@ -140,7 +140,7 @@ li:first-child{ }   /* structural position */
   adding padding makes the box wider than you asked for. With
   <code>border-box</code>, width means the whole visible width, padding and
   border included. Every project sets this on the first line and never thinks
-  about it again — including this one, in <code>theme.css</code>.
+  about it again — including this one, in <code>client/public/theme.css</code>.
 </p>
 
 <h3>Margins collapse</h3>

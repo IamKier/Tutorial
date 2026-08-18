@@ -99,7 +99,7 @@
 </ul>
 
 <p>
-  In <code>public/index.html</code>, the "open the lessons" control is an
+  In <code>client/index.html</code>, the "open the lessons" control is an
   <code>&lt;a&gt;</code> because it navigates; the theme switch is a
   <code>&lt;button&gt;</code> because it acts.
 </p>
@@ -171,7 +171,7 @@ tabindex="3"    &lt;!-- never do this --&gt;</code></pre>
   <code>tabindex="-1"</code> is genuinely useful, though: it lets JavaScript
   move focus somewhere that is not normally focusable. That is exactly what
   <code>client/src/hooks/useRouter.js</code> does — when you
-  open a lesson, <code>learn.js</code> calls <code>.focus()</code> on it, so a
+  open a lesson, <code>client/src/library/enhance.js</code> calls <code>.focus()</code> on it, so a
   keyboard user lands in the new content instead of being stranded in the
   sidebar.
 </p>
@@ -182,7 +182,7 @@ tabindex="3"    &lt;!-- never do this --&gt;</code></pre>
     Removing the focus ring makes a page unusable without a mouse — you cannot
     see where you are. If the default ring is ugly, replace it, do not delete
     it. Use <code>:focus-visible</code>, which shows the ring for keyboard users
-    but not on mouse clicks. That rule is in <code>theme.css</code>.
+    but not on mouse clicks. That rule is in <code>client/public/theme.css</code>.
   </p>
 </div>
 
@@ -267,7 +267,7 @@ tabindex="3"    &lt;!-- never do this --&gt;</code></pre>
     <summary>Show answer</summary>
     <p>
       Everything is reachable. The delete button is the interesting case: it is
-      invisible until you hover the row, but <code>styles.css</code> also shows
+      invisible until you hover the row, but <code>client/src/styles/app.css</code> also shows
       it on <code>:focus-visible</code>, so tabbing to it makes it appear. A
       hover-only control without that partner rule is unreachable by keyboard —
       one of the most common bugs in otherwise well-built interfaces.

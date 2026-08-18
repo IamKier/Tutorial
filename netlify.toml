@@ -39,6 +39,16 @@
 # the app later moves to real paths. Serving index.html with a 200 rather than
 # a 301 means the URL in the address bar is preserved for the app to read.
 # -----------------------------------------------------------------------------
+# There is no backend on a static host. Answer /api/* honestly with a 404
+# rather than letting the catch-all below hand back index.html with a 200 —
+# a web page pretending to be an API response is the confusing case.
+#
+# Order matters: Netlify uses the first rule that matches.
+[[redirects]]
+  from = "/api/*"
+  to = "/404-no-api"
+  status = 404
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

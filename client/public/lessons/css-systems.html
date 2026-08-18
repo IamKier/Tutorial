@@ -48,7 +48,7 @@ document.documentElement.style.setProperty('--accent', 'tomato');</code></pre>
 
 <p>
   A design system is mostly a short list of allowed values, which people call
-  tokens. Open <code>public/theme.css</code> — the whole first section is
+  tokens. Open <code>client/public/theme.css</code> — the whole first section is
   nothing but this:
 </p>
 
@@ -142,7 +142,7 @@ localStorage.setItem('theme', next);</code></pre>
     every load. The fix is a tiny blocking script in the
     <code>&lt;head&gt;</code> that sets the attribute before the first paint.
     Both pages in this project do exactly that; it is the very first script tag
-    in <code>index.html</code>.
+    in <code>client/index.html</code>.
   </p>
 </div>
 
@@ -355,10 +355,10 @@ body { background: var(--bg); color: var(--text); }</code></pre>
     <h3 class="exercise__title">Retheme the app</h3>
   </div>
   <p>
-    Open <code>public/theme.css</code> and change <code>--accent</code>,
+    Open <code>client/public/theme.css</code> and change <code>--accent</code>,
     <code>--accent-hover</code> and <code>--accent-soft</code> to a green.
     Reload the task tracker. How many places changed, and how many lines did you
-    edit? Then find every rule in <code>styles.css</code> that would have needed
+    edit? Then find every rule in <code>client/src/styles/app.css</code> that would have needed
     editing without variables.
   </p>
   <details>

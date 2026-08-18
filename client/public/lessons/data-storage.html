@@ -52,7 +52,7 @@ JSON.parse(text)               // string -> object</code></pre>
 
 <p>
   Convert to local time only when you show it. That is what
-  <code>relativeTime()</code> in <code>app.js</code> does — the stored value
+  <code>relativeTime()</code> in <code>client/src/format.js</code> does — the stored value
   never changes, the display adapts to the reader.
 </p>
 
@@ -84,7 +84,7 @@ JSON.parse(text)               // string -> object</code></pre>
 <p>
   Anything you can calculate should be calculated. Store it and you now have two
   sources of truth that must be kept in step — and one day they will not be.
-  <code>render()</code> in <code>app.js</code> recomputes the counts and
+  the <code>stats</code> memo in <code>client/src/hooks/useTasks.js</code> recomputes the counts and
   percentage on every draw, and they are therefore never wrong.
 </p>
 
@@ -173,7 +173,7 @@ await writeAll(tasks);</code></pre>
 <h2>Why a file stops working</h2>
 
 <p>
-  <code>db.js</code> reads and rewrites the whole file for every change. That is
+  <code>src/db/tasks.js</code> reads and rewrites the whole file for every change. That is
   fine for a few hundred tasks and wrong for anything real:
 </p>
 
@@ -251,10 +251,10 @@ const rows = db.prepare('SELECT * FROM tasks ORDER BY createdAt DESC').all();</c
 <div class="callout callout--tip">
   <span class="callout__title">This is why db.js is separate</span>
   <p>
-    Nothing outside <code>db.js</code> knows that data lives in a JSON file.
+    Nothing outside <code>src/db/tasks.js</code> knows that data lives in a JSON file.
     <code>server.js</code> calls <code>db.createTask(title)</code> and has no
     idea what happens inside. So switching to SQLite means rewriting that one
-    file — and <code>server.js</code>, <code>app.js</code> and the HTML never
+    file — and the routes, the React client and the HTML never
     notice. That payoff is the entire reason to draw the boundary early.
   </p>
 </div>
@@ -305,7 +305,7 @@ const rows = db.prepare('SELECT * FROM tasks ORDER BY createdAt DESC').all();</c
     <h3 class="exercise__title">Reproduce the lost update</h3>
   </div>
   <p>
-    Make it happen deliberately. In <code>db.js</code>, add a two-second delay
+    Make it happen deliberately. In <code>src/db/tasks.js</code>, add a two-second delay
     inside <code>createTask</code> between the read and the write. Then send two
     creates a moment apart and inspect <code>data/tasks.json</code>.
   </p>

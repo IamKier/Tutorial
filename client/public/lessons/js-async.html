@@ -142,7 +142,7 @@ if (!response.ok) {                    // ok is true for 200-299
 const data = await response.json();</code></pre>
 
 <p>
-  This is why <code>app.js</code> has a <code>request()</code> wrapper rather
+  This is why <code>client/src/api.js</code> has a <code>request()</code> wrapper rather
   than calling <code>fetch</code> in four places — one check, written once,
   impossible to forget.
 </p>
@@ -324,7 +324,7 @@ console.log(data);</code></pre>
     <h3 class="exercise__title">Make deletes optimistic</h3>
   </div>
   <p>
-    In <code>public/app.js</code>, change the delete handler so the task
+    In <code>client/src/hooks/useTasks.js</code>, change the delete handler so the task
     disappears immediately and is restored if the request fails. Test the
     failure path by stopping the server (Ctrl+C) and then deleting a task.
   </p>

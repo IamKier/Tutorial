@@ -1573,3 +1573,55 @@ kbd {
     padding: var(--space-2);
   }
 }
+
+/* --- 15. CONTENTS HEADER ----------------------------------------------------
+   Deliberately small. The cover has already introduced the library; this page
+   only needs to say where you are and get out of the way.
+   -------------------------------------------------------------------------- */
+.contents-head {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.contents-head__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.contents-head__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.contents-head__resume {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--accent);
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--text-sm);
+}
+
+.contents-head__resume:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.contents-head__resume .icon {
+  width: 14px;
+  height: 14px;
+}

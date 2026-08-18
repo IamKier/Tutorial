@@ -261,7 +261,7 @@ DELETE /api/tasks/&lt;id&gt;    204   no body sent</code></pre>
     <p>
       The delete returns <code>204 No Content</code> — the deletion succeeded and
       there is deliberately nothing to send back. A 204 response
-      <em>must not</em> have a body, which is why <code>app.js</code> checks for
+      <em>must not</em> have a body, which is why <code>client/src/api.js</code> checks for
       that status before calling <code>.json()</code>: parsing an empty body
       would throw.
     </p>

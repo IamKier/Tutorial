@@ -35,6 +35,22 @@ async function request(url, { method = 'GET', body } = {}) {
     throw new ApiError(0, 'Cannot reach the server. Is it still running?');
   }
 
+  // ---- Is there actually an API behind this URL? --------------------------
+  // On a static host the single-page-app redirect catches /api/* too and hands
+  // back index.html with a 200. Without this check, `response.ok` is true, the
+  // JSON parse then fails, and the reader sees "Unexpected token '<'" — which
+  // describes the symptom and hides the cause.
+  //
+  // Checking the content type instead of trusting the status catches it on any
+  // host, rather than depending on each one being configured correctly.
+  // A 204 carries no body and so no content type; it is a valid answer.
+  const contentType = response.headers.get('content-type') ?? '';
+  if (response.status !== 204 && !contentType.includes('application/json')) {
+    // Status 0 is this file's signal for "nothing is listening", which is what
+    // the demo page watches for.
+    throw new ApiError(0, 'No API is running at this address.');
+  }
+
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
     try {

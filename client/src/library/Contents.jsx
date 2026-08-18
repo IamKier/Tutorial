@@ -18,37 +18,24 @@ export function Contents({ progress }) {
 
   return (
     <div className="page">
-      <header className="hero">
-        <p className="hero__eyebrow">A study library</p>
-        <h1 className="hero__title">Learn fullstack development</h1>
-        <p className="hero__lead">
-          Fifteen lessons taking you from a blank HTML file to a working application —
-          frontend, backend and database. Everything is hand-written and explained, with
-          exercises at the end of each lesson.
-        </p>
-
-        <div className="hero__meta">
+      {/*
+        Deliberately spare. The cover has already made the pitch — repeating
+        the same headline, the same paragraph and the same three statistics one
+        click later gives the reader nothing and delays the thing they came
+        for, which is the list.
+      */}
+      <header className="contents-head">
+        <p className="contents-head__eyebrow">Contents</p>
+        <div className="contents-head__meta">
           <span>
-            <strong>{TOTAL_LESSONS}</strong> lessons
+            {TOPICS.length} parts · {TOTAL_LESSONS} lessons ·{' '}
+            {Math.round(TOTAL_MINUTES / 60)} hours
           </span>
-          <span>
-            <strong>{Math.round(TOTAL_MINUTES / 60)}</strong> hours of reading
-          </span>
-          <span>
-            <strong>{TOPICS.length}</strong> topics
-          </span>
-        </div>
-
-        <div className="hero__actions">
-          <a className="button button--primary" href={href.lesson(nextLesson?.slug ?? 'welcome')}>
-            {started ? 'Continue' : 'Start reading'}
-            <Icon name="arrowRight" />
-          </a>
-
           {started && (
-            <span className="hero__progress">
-              {progress.total} of {TOTAL_LESSONS} read · {progress.percent}%
-            </span>
+            <a className="contents-head__resume" href={href.lesson(nextLesson?.slug ?? 'welcome')}>
+              Resume at {nextLesson?.title ?? 'the beginning'}
+              <Icon name="arrowRight" />
+            </a>
           )}
         </div>
       </header>
