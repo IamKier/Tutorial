@@ -103,7 +103,7 @@ const skip = !chrome
     ? 'no dist/ — run `npm run build` first'
     : false;
 
-test('the built site renders something', { skip }, async (t) => {
+test('the cover renders at the root', { skip }, async (t) => {
   const server = await serve(4179);
   t.after(() => server.close());
 
@@ -113,9 +113,21 @@ test('the built site renders something', { skip }, async (t) => {
   // means React threw before it could mount.
   assert.doesNotMatch(dom, /<div id="root"><\/div>/, 'React did not mount — #root is empty');
 
-  // And the content is really there, not just any markup.
-  assert.match(dom, /Learn fullstack/, 'the home page heading is missing');
+  assert.match(dom, /cover__title/, 'the cover did not render');
+  assert.match(dom, /Development/, 'the cover title is missing');
+});
+
+test('the contents page lists the topics', { skip }, async (t) => {
+  const server = await serve(4181);
+  t.after(() => server.close());
+
+  const dom = await render('http://localhost:4181/#/contents');
+
+  assert.doesNotMatch(dom, /<div id="root"><\/div>/, 'React did not mount');
   assert.match(dom, /shelf__title/, 'the topic shelves did not render');
+  // The roman numerals prove the catalogue was read, not just that some
+  // markup appeared.
+  assert.match(dom, /shelf__numeral/, 'the chapter numerals are missing');
 });
 
 test('a lesson page renders its content', { skip }, async (t) => {

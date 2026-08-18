@@ -11,7 +11,8 @@
 // part after # — because the server never sees it, so every route works
 // without any server configuration at all:
 //
-//     #/                    home
+//     #/                    the cover
+//     #/contents            every topic
 //     #/topic/css           one topic
 //     #/lesson/css-basics   one lesson
 //     #/demo                the example app
@@ -31,6 +32,7 @@ function parse(hash) {
 
   if (name === 'lesson' && param) return { name: 'lesson', param };
   if (name === 'topic' && param) return { name: 'topic', param };
+  if (name === 'contents') return { name: 'contents', param: null };
   if (name === 'demo') return { name: 'demo', param: null };
 
   return { name: 'home', param: null };
@@ -64,6 +66,7 @@ export function useRouter() {
 /** Build the href for a route, so links are written in one style everywhere. */
 export const href = {
   home: () => '#/',
+  contents: () => '#/contents',
   topic: (id) => `#/topic/${id}`,
   lesson: (slug) => `#/lesson/${slug}`,
   demo: () => '#/demo',

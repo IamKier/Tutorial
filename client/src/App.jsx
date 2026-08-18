@@ -11,7 +11,8 @@ import { useRouter, href } from './hooks/useRouter.js';
 import { useProgress } from './hooks/useProgress.js';
 import { useTheme } from './hooks/useTheme.js';
 import { TOTAL_LESSONS } from './content/catalogue.js';
-import { Home } from './library/Home.jsx';
+import { Cover } from './library/Cover.jsx';
+import { Contents } from './library/Contents.jsx';
 import { TopicPage } from './library/TopicPage.jsx';
 import { LessonPage } from './library/LessonPage.jsx';
 import { Search } from './library/Search.jsx';
@@ -81,7 +82,8 @@ export default function App() {
       </header>
 
       <main className="shell">
-        {route.name === 'home' && <Home progress={progress} />}
+        {route.name === 'home' && <Cover progress={progress} />}
+        {route.name === 'contents' && <Contents progress={progress} />}
         {route.name === 'topic' && <TopicPage topicId={route.param} progress={progress} />}
         {route.name === 'lesson' && <LessonPage slug={route.param} progress={progress} />}
         {route.name === 'demo' && <TasksPage />}

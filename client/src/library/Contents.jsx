@@ -1,16 +1,16 @@
 // ============================================================================
-// Home — THE SHELVES
+// Contents — THE SHELVES
 // ============================================================================
 //
-// The front of the library. Its job is to answer three questions in the first
-// few seconds: what is in here, where do I start, and where was I.
+// The table of contents: every topic, in reading order, with how far through
+// each one you are. This is where the cover sends you.
 // ============================================================================
 
 import { TOPICS, TOTAL_LESSONS, TOTAL_MINUTES, LESSONS, roman } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { Icon } from '../components/Icon.jsx';
 
-export function Home({ progress }) {
+export function Contents({ progress }) {
   // Where to send someone who has started but not finished: the first lesson
   // they have not marked as read, in reading order.
   const nextLesson = LESSONS.find((lesson) => !progress.isDone(lesson.slug));
