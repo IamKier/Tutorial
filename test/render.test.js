@@ -154,10 +154,10 @@ test('a subject shelf shows its books', { skip }, async (t) => {
 
   const dom = await render('http://localhost:4183/#/subject/web-development');
 
-  assert.match(dom, /class="book/, 'no books on the shelf');
-  assert.match(dom, /book__spine/, 'books have no spines');
+  assert.match(dom, /shelf-unit/, 'the shelf unit did not render');
+  assert.match(dom, /shelf-board/, 'the shelf has no board');
   // Nine volumes, each with a spine.
-  const spines = (dom.match(/book__spine/g) ?? []).length;
+  const spines = (dom.match(/spine__title/g) ?? []).length;
   assert.equal(spines, 9, `expected 9 volumes, found ${spines}`);
 });
 

@@ -8,9 +8,10 @@
 // without pretending to be a photograph of one.
 // ============================================================================
 
-import { getSubject, bookMinutes, roman } from '../content/catalogue.js';
+import { getSubject } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { Icon } from '../components/Icon.jsx';
+import { Bookshelf } from './Bookshelf.jsx';
 
 export function SubjectPage({ subjectId, progress }) {
   const subject = getSubject(subjectId);
@@ -46,44 +47,7 @@ export function SubjectPage({ subjectId, progress }) {
         {subject.books.flatMap((b) => b.chapters).length} chapters read
       </p>
 
-      {/* The shelf itself. A rule beneath the row is drawn in CSS, so the
-          books look stood on something rather than floating. */}
-      <ul className="shelf-row" aria-label={`Volumes in ${subject.title}`}>
-        {subject.books.map((book, index) => {
-          const read = progress.countIn(book.chapters);
-          const complete = read === book.chapters.length;
-
-          return (
-            <li key={book.id}>
-              <a
-                className={`book${complete ? ' is-complete' : ''}`}
-                href={href.book(book.id)}
-                // The spine colour is data, not design — it lives in the
-                // catalogue so a new book brings its own.
-                style={{ '--spine': book.spine }}
-              >
-                <span className="book__spine" aria-hidden="true" />
-
-                <span className="book__face">
-                  <span className="book__title">{book.title}</span>
-                  <span className="book__tagline">{book.tagline}</span>
-
-                  <span className="book__foot">
-                    <span className="book__volume">{index === 0 ? '—' : roman(index)}</span>
-                    <span className="book__chapters">
-                      {book.chapters.length} ch · {bookMinutes(book)} min
-                    </span>
-                  </span>
-                </span>
-
-                {read > 0 && (
-                  <span className="book__ribbon">{complete ? 'Read' : `${read}/${book.chapters.length}`}</span>
-                )}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      <Bookshelf books={subject.books} progress={progress} />
     </div>
   );
 }
