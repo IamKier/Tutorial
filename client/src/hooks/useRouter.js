@@ -12,9 +12,10 @@
 // without any server configuration at all:
 //
 //     #/                    the cover
-//     #/contents            every topic
-//     #/topic/css           one topic
-//     #/lesson/css-basics   one lesson
+//     #/subjects            the catalogue of subjects
+//     #/subject/web-…      one subject's shelf of books
+//     #/book/css            one book's chapters
+//     #/lesson/css-basics   one chapter
 //     #/demo                the example app
 //
 // react-router does much more than this (nested routes, loaders, transitions).
@@ -31,8 +32,9 @@ function parse(hash) {
   const [name, param] = path.split('/');
 
   if (name === 'lesson' && param) return { name: 'lesson', param };
-  if (name === 'topic' && param) return { name: 'topic', param };
-  if (name === 'contents') return { name: 'contents', param: null };
+  if (name === 'book' && param) return { name: 'book', param };
+  if (name === 'subject' && param) return { name: 'subject', param };
+  if (name === 'subjects') return { name: 'subjects', param: null };
   if (name === 'demo') return { name: 'demo', param: null };
 
   return { name: 'home', param: null };
@@ -66,8 +68,9 @@ export function useRouter() {
 /** Build the href for a route, so links are written in one style everywhere. */
 export const href = {
   home: () => '#/',
-  contents: () => '#/contents',
-  topic: (id) => `#/topic/${id}`,
+  subjects: () => '#/subjects',
+  subject: (id) => `#/subject/${id}`,
+  book: (id) => `#/book/${id}`,
   lesson: (slug) => `#/lesson/${slug}`,
   demo: () => '#/demo',
 };

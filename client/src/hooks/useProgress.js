@@ -11,7 +11,7 @@
 // ============================================================================
 
 import { useState, useCallback, useEffect } from 'react';
-import { TOTAL_LESSONS } from '../content/catalogue.js';
+import { TOTAL_CHAPTERS } from '../content/catalogue.js';
 
 const KEY = 'library-progress';
 
@@ -69,6 +69,6 @@ export function useProgress() {
     reset,
     countIn,
     total: done.size,
-    percent: Math.round((done.size / TOTAL_LESSONS) * 100),
+    percent: Math.round((done.size / TOTAL_CHAPTERS) * 100),
   };
 }

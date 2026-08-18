@@ -117,17 +117,15 @@ test('the cover renders at the root', { skip }, async (t) => {
   assert.match(dom, /Development/, 'the cover title is missing');
 });
 
-test('the contents page lists the topics', { skip }, async (t) => {
+test('the catalogue lists the subjects', { skip }, async (t) => {
   const server = await serve(4181);
   t.after(() => server.close());
 
-  const dom = await render('http://localhost:4181/#/contents');
+  const dom = await render('http://localhost:4181/#/subjects');
 
   assert.doesNotMatch(dom, /<div id="root"><\/div>/, 'React did not mount');
-  assert.match(dom, /shelf__title/, 'the topic shelves did not render');
-  // The roman numerals prove the catalogue was read, not just that some
-  // markup appeared.
-  assert.match(dom, /shelf__numeral/, 'the chapter numerals are missing');
+  assert.match(dom, /subject-card__title/, 'the subject cards did not render');
+  assert.match(dom, /Web Development/, 'the subject is missing');
 });
 
 test('a lesson page renders its content', { skip }, async (t) => {
@@ -148,6 +146,19 @@ test('a lesson page renders its content', { skip }, async (t) => {
   assert.match(dom, /tok-keyword|tok-comment|tok-string/, 'syntax highlighting did not survive');
   assert.match(dom, /copy-button/, 'copy buttons did not survive');
   assert.match(dom, /<h2 id="/, 'heading ids are missing, so the outline cannot link');
+});
+
+test('a subject shelf shows its books', { skip }, async (t) => {
+  const server = await serve(4183);
+  t.after(() => server.close());
+
+  const dom = await render('http://localhost:4183/#/subject/web-development');
+
+  assert.match(dom, /class="book/, 'no books on the shelf');
+  assert.match(dom, /book__spine/, 'books have no spines');
+  // Nine volumes, each with a spine.
+  const spines = (dom.match(/book__spine/g) ?? []).length;
+  assert.equal(spines, 9, `expected 9 volumes, found ${spines}`);
 });
 
 test('runnable examples get a Run button', { skip }, async (t) => {

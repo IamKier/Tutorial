@@ -14,7 +14,7 @@
 // ============================================================================
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { LESSONS } from '../content/catalogue.js';
+import { CHAPTERS } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { Icon } from '../components/Icon.jsx';
 
@@ -51,7 +51,7 @@ export function Search({ open, onClose }) {
     // All of them at once rather than one after another: eighteen requests in
     // sequence would take eighteen round trips instead of one.
     Promise.all(
-      LESSONS.map(async (lesson) => {
+      CHAPTERS.map(async (lesson) => {
         const response = await fetch(`/lessons/${lesson.slug}.html`);
         const html = await response.text();
         return { ...lesson, text: toPlainText(html) };
@@ -81,22 +81,22 @@ export function Search({ open, onClose }) {
     const needle = query.trim().toLowerCase();
     if (needle.length < 2) return [];
 
-    const source = index ?? LESSONS.map((lesson) => ({ ...lesson, text: '' }));
+    const source = index ?? CHAPTERS.map((lesson) => ({ ...lesson, text: '' }));
 
     return source
       .map((lesson) => {
         const inTitle = lesson.title.toLowerCase().includes(needle);
-        const inTopic = lesson.topicTitle.toLowerCase().includes(needle);
+        const inTopic = lesson.bookTitle.toLowerCase().includes(needle);
         const bodyAt = lesson.text.toLowerCase().indexOf(needle);
 
-        if (!inTitle && !inTopic && bodyAt === -1) return null;
+        if (!inTitle && !inBook && bodyAt === -1) return null;
 
         return {
           ...lesson,
           // A title match is almost always what you meant, so it outranks a
           // body match no matter how many times the word appears in the text.
-          score: inTitle ? 0 : inTopic ? 1 : 2,
-          preview: bodyAt !== -1 ? snippet(lesson.text, needle) : lesson.topicTitle,
+          score: inTitle ? 0 : inBook ? 1 : 2,
+          preview: bodyAt !== -1 ? snippet(lesson.text, needle) : lesson.tagline ?? lesson.bookTitle,
         };
       })
       .filter(Boolean)
@@ -156,7 +156,7 @@ export function Search({ open, onClose }) {
               href={href.lesson(result.slug)}
               onClick={onClose}
             >
-              <span className="search-result__topic">{result.topicTitle}</span>
+              <span className="search-result__topic">{result.bookTitle}</span>
               <span className="search-result__title">{result.title}</span>
               <span className="search-result__preview">{result.preview}</span>
             </a>

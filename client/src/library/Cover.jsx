@@ -14,13 +14,13 @@
 // way back in rather than an obstacle.
 // ============================================================================
 
-import { TOPICS, TOTAL_LESSONS, TOTAL_MINUTES, LESSONS } from '../content/catalogue.js';
+import { TOTAL_BOOKS, TOTAL_CHAPTERS, TOTAL_MINUTES, CHAPTERS } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 
 export function Cover({ progress }) {
-  const nextLesson = LESSONS.find((lesson) => !progress.isDone(lesson.slug));
+  const nextChapter = CHAPTERS.find((chapter) => !progress.isDone(chapter.slug));
   const started = progress.total > 0;
-  const finished = !nextLesson;
+  const finished = !nextChapter;
 
   const hours = Math.round(TOTAL_MINUTES / 60);
 
@@ -50,12 +50,12 @@ export function Cover({ progress }) {
         {/* Set like the publication details on a title page verso. */}
         <dl className="cover__details">
           <div>
-            <dt>Lessons</dt>
-            <dd>{TOTAL_LESSONS}</dd>
+            <dt>Chapters</dt>
+            <dd>{TOTAL_CHAPTERS}</dd>
           </div>
           <div>
-            <dt>Parts</dt>
-            <dd>{TOPICS.length}</dd>
+            <dt>Volumes</dt>
+            <dd>{TOTAL_BOOKS}</dd>
           </div>
           <div>
             <dt>Reading time</dt>
@@ -65,18 +65,18 @@ export function Cover({ progress }) {
 
         <div className="cover__actions">
           {finished ? (
-            <a className="button button--primary" href={href.contents()}>
-              Browse the contents
+            <a className="button button--primary" href={href.subjects()}>
+              Browse the catalogue
             </a>
           ) : (
-            <a className="button button--primary" href={href.lesson(nextLesson.slug)}>
+            <a className="button button--primary" href={href.lesson(nextChapter.slug)}>
               {started ? 'Continue reading' : 'Begin reading'}
             </a>
           )}
 
           {!finished && (
-            <a className="cover__secondary" href={href.contents()}>
-              or browse the contents
+            <a className="cover__secondary" href={href.subjects()}>
+              or browse the catalogue
             </a>
           )}
         </div>
@@ -84,8 +84,8 @@ export function Cover({ progress }) {
         {started && (
           <p className="cover__progress">
             {finished
-              ? `All ${TOTAL_LESSONS} lessons read.`
-              : `${progress.total} of ${TOTAL_LESSONS} read · next up, ${nextLesson.title}`}
+              ? `All ${TOTAL_CHAPTERS} chapters read.`
+              : `${progress.total} of ${TOTAL_CHAPTERS} read · next up, ${nextChapter.title}`}
           </p>
         )}
       </div>

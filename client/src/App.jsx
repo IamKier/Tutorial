@@ -10,10 +10,11 @@ import { useState, useEffect } from 'react';
 import { useRouter, href } from './hooks/useRouter.js';
 import { useProgress } from './hooks/useProgress.js';
 import { useTheme } from './hooks/useTheme.js';
-import { TOTAL_LESSONS } from './content/catalogue.js';
+import { TOTAL_CHAPTERS } from './content/catalogue.js';
 import { Cover } from './library/Cover.jsx';
-import { Contents } from './library/Contents.jsx';
-import { TopicPage } from './library/TopicPage.jsx';
+import { SubjectsPage } from './library/SubjectsPage.jsx';
+import { SubjectPage } from './library/SubjectPage.jsx';
+import { BookPage } from './library/BookPage.jsx';
 import { LessonPage } from './library/LessonPage.jsx';
 import { Search } from './library/Search.jsx';
 import { TasksPage } from './components/TasksPage.jsx';
@@ -65,7 +66,7 @@ export default function App() {
 
           {progress.total > 0 && (
             <span className="topbar__progress" title={`${progress.percent}% read`}>
-              {progress.total}/{TOTAL_LESSONS}
+              {progress.total}/{TOTAL_CHAPTERS}
             </span>
           )}
 
@@ -83,8 +84,9 @@ export default function App() {
 
       <main className="shell">
         {route.name === 'home' && <Cover progress={progress} />}
-        {route.name === 'contents' && <Contents progress={progress} />}
-        {route.name === 'topic' && <TopicPage topicId={route.param} progress={progress} />}
+        {route.name === 'subjects' && <SubjectsPage progress={progress} />}
+        {route.name === 'subject' && <SubjectPage subjectId={route.param} progress={progress} />}
+        {route.name === 'book' && <BookPage bookId={route.param} progress={progress} />}
         {route.name === 'lesson' && <LessonPage slug={route.param} progress={progress} />}
         {route.name === 'demo' && <TasksPage />}
       </main>

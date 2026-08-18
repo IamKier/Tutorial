@@ -7,15 +7,15 @@
 // ============================================================================
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { getLesson, LESSONS, lessonIndex, TOTAL_LESSONS } from '../content/catalogue.js';
+import { getChapter, CHAPTERS, chapterIndex, TOTAL_CHAPTERS } from '../content/catalogue.js';
 import { href } from '../hooks/useRouter.js';
 import { enhance } from './enhance.js';
 import { Icon } from '../components/Icon.jsx';
 import { Outline } from './Outline.jsx';
 
 export function LessonPage({ slug, progress }) {
-  const lesson = getLesson(slug);
-  const index = lessonIndex(slug);
+  const lesson = getChapter(slug);
+  const index = chapterIndex(slug);
 
   const [html, setHtml] = useState(null);
   const [error, setError] = useState(null);
@@ -84,31 +84,33 @@ export function LessonPage({ slug, progress }) {
   if (!lesson) {
     return (
       <div className="page">
-        <h1>Lesson not found</h1>
+        <h1>Chapter not found</h1>
         <p className="lead">
-          That link does not match a lesson. <a href={href.home()}>Back to the library</a>.
+          That link does not match a chapter. <a href={href.subjects()}>Back to the catalogue</a>.
         </p>
       </div>
     );
   }
 
-  const previous = LESSONS[index - 1];
-  const next = LESSONS[index + 1];
+  const previous = CHAPTERS[index - 1];
+  const next = CHAPTERS[index + 1];
   const isDone = progress.isDone(slug);
 
   return (
     <div className="reader">
       <div className="reader__main">
         <nav className="crumbs" aria-label="Breadcrumb">
-          <a href={href.home()}>Library</a>
+          <a href={href.subjects()}>Library</a>
           <Icon name="chevronRight" />
-          <a href={href.topic(lesson.topicId)}>{lesson.topicTitle}</a>
+          <a href={href.subject(lesson.subjectId)}>{lesson.subjectTitle}</a>
+          <Icon name="chevronRight" />
+          <a href={href.book(lesson.bookId)}>{lesson.bookTitle}</a>
           <Icon name="chevronRight" />
           <span aria-current="page">{lesson.title}</span>
         </nav>
 
         <p className="reader__eyebrow">
-          Lesson {index + 1} of {TOTAL_LESSONS} · {lesson.level} · {lesson.minutes} min read
+          Chapter {index + 1} of {TOTAL_CHAPTERS} · {lesson.level} · {lesson.minutes} min read
         </p>
 
         {error && (
